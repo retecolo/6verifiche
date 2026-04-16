@@ -1,0 +1,40 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+}
+
+model Platform {
+  id          String   @id @default(cuid())
+  vendor      String
+  modelName   String
+  osVersion   String
+  results     TestResult[]
+  createdAt   DateTime @default(now())
+}
+
+model TestCase {
+  id          String   @id @default(cuid())
+  category    String   // e.g. "Management & Telemetry"
+  name        String   // e.g. "SSHv2"
+  description String
+  results     TestResult[]
+}
+
+model TestResult {
+  id          String   @id @default(cuid())
+  platformId  String
+  testCaseId  String
+  status      String   // "PASS", "FAIL", "PARTIAL", "N/A"
+  detail      String?
+  platform    Platform @relation(fields: [platformId], references: [id])
+  testCase    TestCase @relation(fields: [testCaseId], references: [id])
+  createdAt   DateTime @default(now())
+
+  @@unique([platformId, testCaseId])
+}
