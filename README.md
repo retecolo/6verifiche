@@ -15,7 +15,7 @@ Built on the modern Next.js App Router, it provides:
 
 1. **Navigate to the application directory:**
    ```bash
-   cd ipv6-test-framework
+   cd 6verifiche
    ```
 
 2. **Install dependencies:**
