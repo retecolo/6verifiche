@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
-import { getPlatforms, createPlatform } from '@/lib/platform.service';
-import { PlatformSchema, PaginationSchema } from '@/lib/validation';
+import { getResults, upsertResult } from '@/lib/result.service';
+import { ResultSchema, PaginationSchema } from '@/lib/validation';
 
 export async function GET(request: Request) {
   try {
@@ -9,23 +9,23 @@ export async function GET(request: Request) {
       page: searchParams.get('page') ?? 1,
       limit: searchParams.get('limit') ?? 50,
     });
-    const data = await getPlatforms(page, limit);
+    const data = await getResults(page, limit);
     return NextResponse.json(data);
   } catch {
-    return NextResponse.json({ error: 'Failed to fetch platforms' }, { status: 500 });
+    return NextResponse.json({ error: 'Failed to fetch results' }, { status: 500 });
   }
 }
 
 export async function POST(request: Request) {
   try {
     const body = await request.json();
-    const parsed = PlatformSchema.safeParse(body);
+    const parsed = ResultSchema.safeParse(body);
     if (!parsed.success) {
       return NextResponse.json({ error: parsed.error.flatten() }, { status: 400 });
     }
-    const platform = await createPlatform(parsed.data);
-    return NextResponse.json(platform, { status: 201 });
+    const result = await upsertResult(parsed.data);
+    return NextResponse.json(result, { status: 201 });
   } catch {
-    return NextResponse.json({ error: 'Failed to create platform' }, { status: 500 });
+    return NextResponse.json({ error: 'Failed to save result' }, { status: 500 });
   }
 }

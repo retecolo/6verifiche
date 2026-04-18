@@ -1,0 +1,11 @@
+.next
+node_modules
+prisma/dev.db
+prisma/test.db
+.env
+.env.local
+.git
+.gitignore
+README.md
+coverage
+*.tsbuildinfo

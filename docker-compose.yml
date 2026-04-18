@@ -1,0 +1,30 @@
+services:
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    ports:
+      # Bind only on IPv6 — the final deployment host is IPv6-only.
+      # On dual-stack dev hosts, [::]:3000 also accepts IPv4-mapped connections.
+      - "[::]:3000:3000"
+    environment:
+      - NODE_ENV=production
+      - HOSTNAME=::
+      - PORT=3000
+      - DATABASE_URL=file:/data/prod.db
+    volumes:
+      # Persist the SQLite database outside the container
+      - db-data:/data
+    networks:
+      - v6net
+
+networks:
+  v6net:
+    enable_ipv6: true
+    ipam:
+      config:
+        - subnet: "fd00:c0ff:ee::/64"
+
+volumes:
+  db-data:
