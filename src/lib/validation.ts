@@ -6,10 +6,15 @@ export const PlatformSchema = z.object({
   osVersion: z.string().min(1).max(100).trim(),
 });
 
+export const Severity = z.enum(['MANDATORY', 'RECOMMENDED', 'OPTIONAL']);
+
 export const TestCaseSchema = z.object({
   category: z.string().min(1).max(100).trim(),
   name: z.string().min(1).max(150).trim(),
   description: z.string().min(1).max(2000).trim(),
+  rfcReference: z.string().max(500).trim().optional(),
+  severity: Severity.default('MANDATORY'),
+  tags: z.array(z.string().max(50).trim()).max(20).default([]),
 });
 
 export const ResultStatus = z.enum(['PASS', 'FAIL', 'PARTIAL', 'N/A']);
@@ -19,11 +24,17 @@ export const ResultSchema = z.object({
   testCaseId: z.string().cuid(),
   status: ResultStatus,
   detail: z.string().max(2000).trim().optional(),
+  testedAt: z.coerce.date().optional(),
+  testedBy: z.string().max(200).trim().optional(),
+  firmwareBuild: z.string().max(200).trim().optional(),
 });
 
 export const ResultUpdateSchema = z.object({
   status: ResultStatus,
   detail: z.string().max(2000).trim().optional(),
+  testedAt: z.coerce.date().optional(),
+  testedBy: z.string().max(200).trim().optional(),
+  firmwareBuild: z.string().max(200).trim().optional(),
 });
 
 export const PaginationSchema = z.object({

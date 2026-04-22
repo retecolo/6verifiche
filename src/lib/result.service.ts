@@ -32,18 +32,17 @@ export async function getPlatformResultMatrix(platformId: string) {
 
   const resultMap = new Map(results.map(r => [r.testCaseId, r]));
 
-  const matrix = allTestCases.map(tc => ({
+  return allTestCases.map(tc => ({
     testCase: tc,
     result: resultMap.get(tc.id) ?? null,
   }));
-
-  return matrix;
 }
 
 export async function upsertResult(data: ResultInput) {
+  const { platformId, testCaseId, ...updateFields } = data;
   return prisma.testResult.upsert({
-    where: { platformId_testCaseId: { platformId: data.platformId, testCaseId: data.testCaseId } },
-    update: { status: data.status, detail: data.detail },
+    where: { platformId_testCaseId: { platformId, testCaseId } },
+    update: updateFields,
     create: data,
     include: { platform: true, testCase: true },
   });

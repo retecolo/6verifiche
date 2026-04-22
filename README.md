@@ -1,6 +1,8 @@
 # IPv6 Compliance Tracker
 
-A web-based compliance tracking application for validating IPv6 support across network hardware platforms. Add vendors and models, then work through the 21-item compliance checklist derived from [`IPv6-compliance-superset.md`](IPv6-compliance-superset.md) — recording PASS / FAIL / PARTIAL / N/A results with supporting notes inline.
+A web-based compliance tracking application for validating IPv6-only capabilities across network hardware platforms. Add vendors and models, then work through the **69-item compliance checklist** — recording PASS / FAIL / PARTIAL / N/A results with supporting notes inline.
+
+The test suite covers the full IPv6-only stack: core protocols, all major routing protocols (OSPFv3, IS-IS, MP-BGP), MPLS (6PE, 6VPE, LDP), Segment Routing (SRv6, SR-MPLS), overlays (VXLAN, EVPN, GENEVE), multicast (MLDv2, PIM-SM/SSM, mVPN), high availability (BFD, VRRPv3, LFA), security (MACsec, uRPF, CoPP), modern management APIs (NETCONF, RESTCONF, gNMI, OpenConfig), and VPN/tunneling (IKEv2, GRE, L2TPv3). Each test case carries an RFC reference, a severity level (MANDATORY / RECOMMENDED / OPTIONAL), and searchable tags.
 
 Built with **Next.js 16** (App Router), **Prisma 7** ORM, **SQLite**, and **Zod** input validation. Ships with a full REST API, Vitest test suite, and a Docker Compose setup optimised for IPv6-only deployment targets.
 
@@ -40,23 +42,28 @@ Built with **Next.js 16** (App Router), **Prisma 7** ORM, **SQLite**, and **Zod*
 ```bash
 # 1. Clone and enter the repo
 git clone <repo-url>
-cd v6-compliance
+cd 6verifiche
 
-# 2. Install dependencies (includes Zod, Vitest, tsx, vite-tsconfig-paths)
+# 2. Install dependencies
 npm install
 
-# 3. Push the Prisma schema to the local SQLite database and generate the client
+# 3. Create a .env file for the local database URL
+echo 'DATABASE_URL="file:./dev.db"' > .env
+
+# 4. Push the Prisma schema to the local SQLite database and generate the client
 npx prisma db push
 npx prisma generate
 
-# 4. Seed all 21 compliance test cases from IPv6-compliance-superset.md
+# 5. Seed all 69 compliance test cases
 npm run seed
 
-# 5. Start the development server
+# 6. Start the development server
 npm run dev
 ```
 
 The app is now running at **http://localhost:3000**.
+
+> **Note:** `.env` is listed in `.gitignore` and will not be committed. The `DATABASE_URL` must be set (either via `.env` or the environment) for `prisma db push`, `prisma generate`, and `npm run seed` to work.
 
 ---
 
@@ -71,8 +78,7 @@ The Compose file is configured for an **IPv6-only deployment target**. The appli
 docker compose up --build -d
 
 # Seed test cases inside the running container
-docker compose exec app node -e "$(cat scripts/seed.ts | npx tsx /dev/stdin)" 2>/dev/null || \
-  docker compose exec app sh -c 'DATABASE_URL=file:/data/prod.db npx tsx scripts/seed.ts'
+docker compose exec app sh -c 'DATABASE_URL=file:/data/prod.db npx tsx scripts/seed.ts'
 ```
 
 > **Simpler approach:** run the seed locally pointing at the bind-mounted volume, or add a one-time seed command to the Compose `command` override.
@@ -82,8 +88,8 @@ docker compose exec app node -e "$(cat scripts/seed.ts | npx tsx /dev/stdin)" 2>
 On an IPv6-only host:
 
 ```
-http://[::1]:3000/          # loopback
-http://[fd00:c0ff:ee::2]:3000/   # container address on the v6net network
+http://[::1]:3000/                    # loopback
+http://[fd00:c0ff:ee::2]:3000/        # container address on the v6net network
 ```
 
 On a dual-stack dev machine the `[::]:3000` port binding also accepts IPv4-mapped connections at `http://localhost:3000`.
@@ -110,23 +116,36 @@ docker compose down -v
 
 ## Seeding Test Cases
 
-The compliance test cases are defined in [`IPv6-compliance-superset.md`](IPv6-compliance-superset.md) and hard-coded (with descriptions) in [`scripts/seed.ts`](scripts/seed.ts).
+Test cases are defined in [`scripts/seed.ts`](scripts/seed.ts) and derived from [`IPv6-compliance-superset.md`](IPv6-compliance-superset.md).
 
 ```bash
 npm run seed
 ```
 
-The seed script is **idempotent** — re-running it updates descriptions in place without creating duplicates. It uses Prisma `upsert` keyed on `(category, name)`.
+The seed script is **idempotent** — re-running it updates all metadata in place without creating duplicates or affecting existing test results. It upserts on the `(category, name)` unique key and syncs `description`, `rfcReference`, `severity`, and `tags` on every run.
 
-**21 test cases across 5 categories:**
+**69 test cases across 13 categories:**
 
-| Category | Tests |
-|----------|-------|
-| Network Management & Telemetry | SSH, Telnet, RADIUS, TACACS+, Syslog, SNMP, NetFlow/IPFIX/sFlow, NTP, DNS |
-| Core IPv6 Protocols & Features | ICMPv6 & Neighbor Discovery, Addressing & SLAAC/DHCPv6 |
-| IPv6 Routing & Forwarding | RIPng, OSPFv3, IS-IS, MP-BGP |
-| Security, Transition & Hardware | IPv6 ACLs & FHS, Hardware/ASIC Datapath, Transition Mechanisms |
-| Connectivity & Validation | End-to-End Traffic, Log & Monitor Verification, Certifications & Standards |
+| Category | Count | Highlights |
+|----------|-------|------------|
+| Network Management & Telemetry | 9 | SSH, RADIUS, TACACS+, SNMP, syslog, NTP, DNS, NetFlow/IPFIX |
+| Core IPv6 Protocols & Features | 5 | ICMPv6/ND, SLAAC/DHCPv6, extension headers, PMTUD, flow label |
+| IPv6 Routing & Forwarding | 6 | RIPng, OSPFv3, IS-IS, MP-BGP, BGP ADD-PATH, BGP-LU |
+| Security, Transition & Hardware | 5 | ACLs/FHS, ASIC datapath, NAT64, CoPP, uRPF |
+| Connectivity & Validation | 3 | E2E traffic, log/monitor, certifications |
+| MPLS & Label Switching | 5 | 6PE, 6VPE, LDPoIPv6, MPLS BFD, RSVP-TE |
+| Segment Routing | 9 | SRv6 encap, endpoint behaviors, L3VPN, TE policy, IS-IS/OSPFv3 extensions, uSID, OAM, SR-MPLS |
+| Overlay Networks & EVPN | 5 | VXLANv6, VXLAN EVPN, GENEVE, EVPN IRB, EVPN multi-homing |
+| IPv6 Multicast | 5 | MLDv2, PIM-SM, PIM-SSM, mVPN/NG-mVPN, mLDP |
+| High Availability & Resiliency | 5 | BFD, VRRPv3, NSF/graceful restart, ECMP, IP-FRR/LFA |
+| Link Security (MACsec) | 3 | 802.1AE encryption, MKA key agreement, SRv6/VXLAN interop |
+| Modern Management APIs & Telemetry | 5 | NETCONF, RESTCONF, gNMI/gRPC streaming, OpenConfig, gRIBI |
+| VPN & Tunneling | 4 | IPsec/IKEv2, GREv6, L2TPv3, LDP pseudowires |
+
+Each test case includes:
+- **`rfcReference`** — the governing RFC(s) or IEEE standard (e.g. `"RFC 8754"`, `"IEEE 802.1AE"`)
+- **`severity`** — `MANDATORY`, `RECOMMENDED`, or `OPTIONAL`
+- **`tags`** — searchable labels (e.g. `["srv6", "segment-routing", "data-plane"]`)
 
 ---
 
@@ -144,7 +163,7 @@ Overview of all platforms with pass-rate statistics. Per-category breakdown show
 
 ### Compliance Matrix (`/platforms/[id]`)
 
-The main data-entry screen. Displays all 21 test cases grouped by category. For each row:
+The main data-entry screen. Displays all 69 test cases grouped by category. For each row:
 
 - **Status** dropdown — select PASS / FAIL / PARTIAL / N/A (or leave unset).
 - **Notes / Evidence** text field — free-text supporting notes.
@@ -153,7 +172,7 @@ The main data-entry screen. Displays all 21 test cases grouped by category. For 
 
 ### Test Cases (`/testcases`)
 
-Read-only view of all seeded test cases grouped by category, with result counts.
+Read-only view of all seeded test cases grouped by category, showing RFC references, severity levels, and tags alongside result counts.
 
 ---
 
@@ -175,7 +194,7 @@ Tests use a **separate `prisma/test.db`** database that is created and destroyed
 **Test coverage:**
 - `src/__tests__/validation.test.ts` — Zod schema boundary tests (no DB required)
 - `src/__tests__/platform.service.test.ts` — Platform CRUD service tests
-- `src/__tests__/testcase.service.test.ts` — TestCase CRUD + upsert tests
+- `src/__tests__/testcase.service.test.ts` — TestCase CRUD + upsert tests (covers tags serialization)
 - `src/__tests__/result.service.test.ts` — Result upsert, matrix, and update tests
 
 ---
@@ -191,7 +210,7 @@ Tests use a **separate `prisma/test.db`** database that is created and destroyed
 | `npm test` | Run all Vitest tests once |
 | `npm run test:watch` | Vitest in interactive watch mode |
 | `npm run test:coverage` | Vitest with V8 coverage report |
-| `npm run seed` | Seed/update compliance test cases from `scripts/seed.ts` |
+| `npm run seed` | Seed/update all 69 compliance test cases from `scripts/seed.ts` |
 | `npm run db:reset` | Delete `dev.db`, re-push schema, and re-seed (destructive) |
 
 ---
@@ -233,11 +252,18 @@ All endpoints accept and return `application/json`. List endpoints support `?pag
 **POST /api/testcases body:**
 ```json
 {
-  "category": "IPv6 Routing & Forwarding",
-  "name": "OSPFv3",
-  "description": "Verify OSPFv3 neighbour adjacencies and route installation."
+  "category": "Segment Routing",
+  "name": "SRv6 Encapsulation (H.Encaps / H.Insert)",
+  "description": "Verify hardware-accelerated SRH imposition at line rate.",
+  "rfcReference": "RFC 8754",
+  "severity": "MANDATORY",
+  "tags": ["srv6", "segment-routing", "data-plane"]
 }
 ```
+
+`severity` must be one of: `MANDATORY` | `RECOMMENDED` | `OPTIONAL` (defaults to `MANDATORY` if omitted).
+`tags` is an array of strings (max 20 items, each max 50 chars). Defaults to `[]`.
+`rfcReference` is optional free text (max 500 chars).
 
 ### Results
 
@@ -246,7 +272,7 @@ All endpoints accept and return `application/json`. List endpoints support `?pag
 | `GET` | `/api/results` | List results (paginated) |
 | `POST` | `/api/results` | Create or update a result (upsert) |
 | `GET` | `/api/results/:id` | Get a result |
-| `PUT` | `/api/results/:id` | Update status / detail |
+| `PUT` | `/api/results/:id` | Update status / detail / metadata |
 | `DELETE` | `/api/results/:id` | Delete a result |
 
 **POST /api/results body:**
@@ -255,19 +281,39 @@ All endpoints accept and return `application/json`. List endpoints support `?pag
   "platformId": "<cuid>",
   "testCaseId": "<cuid>",
   "status": "PASS",
-  "detail": "SSHv2 verified via GUA and link-local on all tested interfaces."
+  "detail": "SRv6 H.Encaps verified in hardware at 400 Gbps line rate.",
+  "testedAt": "2026-04-22T13:00:00Z",
+  "testedBy": "lab-automation-v2",
+  "firmwareBuild": "EOS 4.32.1F-12345678"
 }
 ```
 
 `status` must be one of: `PASS` | `FAIL` | `PARTIAL` | `N/A`
 
+`testedAt`, `testedBy`, and `firmwareBuild` are optional. They let you record *when* the test was run, *who or what* ran it, and *which exact firmware build* was under test — useful for tracking regressions across firmware upgrades.
+
 The POST endpoint is an **upsert** — posting the same `(platformId, testCaseId)` pair updates the existing record.
+
+**Scripted result ingestion example:**
+```bash
+curl -6 -X POST http://[::1]:3000/api/results \
+  -H "Content-Type: application/json" \
+  -d '{
+    "platformId": "<id>",
+    "testCaseId": "<id>",
+    "status": "PASS",
+    "detail": "Automated test passed",
+    "testedAt": "2026-04-22T13:00:00Z",
+    "testedBy": "ci-pipeline",
+    "firmwareBuild": "17.9.3a"
+  }'
+```
 
 ---
 
 ## Database Schema
 
-Three models managed by Prisma:
+Three models managed by Prisma. Schema lives in [`prisma/schema.prisma`](prisma/schema.prisma).
 
 ```
 Platform
@@ -279,35 +325,48 @@ Platform
   results     TestResult[]
 
 TestCase
-  id          String    @id @default(cuid())
-  category    String
-  name        String
-  description String
-  results     TestResult[]
+  id           String    @id @default(cuid())
+  category     String
+  name         String
+  description  String
+  rfcReference String?                          -- governing RFC(s) / IEEE standard
+  severity     String    @default("MANDATORY")  -- MANDATORY | RECOMMENDED | OPTIONAL
+  tags         String    @default("[]")         -- JSON-encoded string[]
+  results      TestResult[]
   @@unique([category, name])
   @@index([category])
+  @@index([severity])
 
 TestResult
-  id          String    @id @default(cuid())
-  platformId  String
-  testCaseId  String
-  status      String    // PASS | FAIL | PARTIAL | N/A
-  detail      String?
-  createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @updatedAt
+  id            String    @id @default(cuid())
+  platformId    String
+  testCaseId    String
+  status        String                          -- PASS | FAIL | PARTIAL | N/A
+  detail        String?
+  testedAt      DateTime?                       -- when the test was executed
+  testedBy      String?                         -- engineer name or automation system
+  firmwareBuild String?                         -- exact image tested (e.g. "17.9.3a")
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
   @@unique([platformId, testCaseId])
   @@index([platformId])
   @@index([testCaseId])
 ```
 
-To modify the schema: edit `prisma/schema.prisma`, then run `npx prisma db push`.
+**Tags storage:** `tags` is stored as a JSON string in SQLite (e.g. `'["srv6","data-plane"]'`) and deserialized to `string[]` transparently by the service layer. The REST API always returns and accepts `tags` as a JSON array.
+
+To modify the schema: edit `prisma/schema.prisma`, then run:
+```bash
+npx prisma db push
+npx prisma generate
+```
 
 ---
 
 ## Project Structure
 
 ```
-v6-compliance/
+6verifiche/
 ├── src/
 │   ├── app/
 │   │   ├── api/
@@ -324,7 +383,7 @@ v6-compliance/
 │   │   │       └── [id]/route.ts         # GET/PUT/DELETE /api/results/:id
 │   │   ├── platforms/
 │   │   │   ├── page.tsx                  # Platform list + add form
-│   │   │   └── [id]/page.tsx             # Compliance matrix
+│   │   │   └── [id]/page.tsx             # Compliance matrix (69 tests)
 │   │   ├── testcases/page.tsx            # Test case browser
 │   │   ├── page.tsx                      # Dashboard
 │   │   ├── layout.tsx                    # Root layout with Nav
@@ -336,9 +395,9 @@ v6-compliance/
 │   │   └── DeleteButton.tsx              # Confirm-then-delete client button
 │   ├── lib/
 │   │   ├── prisma.ts                     # Singleton PrismaClient
-│   │   ├── validation.ts                 # Zod schemas
+│   │   ├── validation.ts                 # Zod schemas (TestCase, Result, Platform)
 │   │   ├── platform.service.ts           # Platform CRUD
-│   │   ├── testcase.service.ts           # TestCase CRUD
+│   │   ├── testcase.service.ts           # TestCase CRUD + tags serialization
 │   │   └── result.service.ts             # Result CRUD + matrix query
 │   └── __tests__/
 │       ├── globalSetup.ts                # Create/destroy test.db
@@ -350,30 +409,68 @@ v6-compliance/
 ├── prisma/
 │   └── schema.prisma
 ├── scripts/
-│   └── seed.ts                           # Populate compliance test cases
+│   └── seed.ts                           # 69 compliance test cases across 13 categories
+├── .env                                  # DATABASE_URL (git-ignored)
 ├── Dockerfile                            # Multi-stage build (node:20-alpine)
 ├── docker-compose.yml                    # IPv6-only deployment config
 ├── .dockerignore
-├── .github/workflows/ci.yml             # lint → test → build
 ├── vitest.config.ts
 ├── next.config.ts                        # standalone output + CORS headers
-└── IPv6-compliance-superset.md          # Source of truth for test cases
+└── IPv6-compliance-superset.md           # Source of truth for test case definitions
 ```
 
 ---
 
 ## Extending the Application
 
-**Adding new test cases:** edit `scripts/seed.ts` and re-run `npm run seed`. The upsert logic means existing results are not affected.
+### Adding new test cases
 
-**Switching to PostgreSQL:** change `provider = "sqlite"` to `provider = "postgresql"` in `prisma/schema.prisma`, update `DATABASE_URL` in `.env`, and run `npx prisma db push`. No application code changes required.
-
-**Exporting results:** `GET /api/platforms/:id/results` returns the full compliance matrix as JSON, suitable for piping into `jq` or feeding a reporting script.
-
-**Scripted result ingestion:** `POST /api/results` (upsert) is designed for programmatic use. A test automation script can POST results directly:
+Edit `scripts/seed.ts`, add entries to the `TEST_CASES` array with `category`, `name`, `description`, `rfcReference`, `severity`, and `tags`, then run:
 
 ```bash
-curl -6 -X POST http://[::1]:3000/api/results \
-  -H "Content-Type: application/json" \
-  -d '{"platformId":"<id>","testCaseId":"<id>","status":"PASS","detail":"Automated test passed"}'
+npm run seed
 ```
+
+The upsert logic means existing test results are never affected — only test case metadata is updated.
+
+### Adding custom test cases via API
+
+```bash
+curl -6 -X POST http://[::1]:3000/api/testcases \
+  -H "Content-Type: application/json" \
+  -d '{
+    "category": "Segment Routing",
+    "name": "SRv6 FlexAlgo",
+    "description": "Verify Flexible Algorithm (RFC 9350) with SRv6 data plane.",
+    "rfcReference": "RFC 9350",
+    "severity": "OPTIONAL",
+    "tags": ["srv6", "flex-algo", "traffic-engineering"]
+  }'
+```
+
+### Filtering by severity
+
+Use the compliance matrix endpoint and filter client-side, or query the DB directly:
+
+```bash
+# All MANDATORY test cases (via API, paginate as needed)
+GET /api/testcases?limit=200
+# then filter response where severity === "MANDATORY"
+```
+
+### Switching to PostgreSQL
+
+Change `provider = "sqlite"` to `provider = "postgresql"` in `prisma/schema.prisma`, update `DATABASE_URL` in `.env`, and run `npx prisma db push`. No application code changes required. The `tags` field (stored as a JSON string for SQLite compatibility) can be migrated to a native `Json` column type in PostgreSQL by changing the field type in the schema.
+
+### Exporting results
+
+`GET /api/platforms/:id/results` returns the full compliance matrix as JSON — the platform record plus every test case with its result (null if untested). Suitable for piping into `jq` or feeding a reporting script:
+
+```bash
+curl -6 -s http://[::1]:3000/api/platforms/<id>/results | \
+  jq '.matrix[] | select(.result.status == "FAIL") | .testCase.name'
+```
+
+### Tracking firmware regressions
+
+Each result record accepts `testedAt`, `testedBy`, and `firmwareBuild` fields. Automate ingestion from a CI pipeline and use the `detail` field to record test tool output. To track history across firmware versions, query results filtered by `firmwareBuild` or script against the API to compare two platform records representing the same hardware at different firmware versions.

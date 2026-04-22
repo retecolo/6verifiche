@@ -17,26 +17,33 @@ model Platform {
 }
 
 model TestCase {
-  id          String       @id @default(cuid())
-  category    String
-  name        String
-  description String
-  results     TestResult[]
+  id           String       @id @default(cuid())
+  category     String
+  name         String
+  description  String
+  rfcReference String?
+  severity     String       @default("MANDATORY") // MANDATORY | RECOMMENDED | OPTIONAL
+  tags         String       @default("[]")         // JSON-encoded string[]
+  results      TestResult[]
 
   @@unique([category, name])
   @@index([category])
+  @@index([severity])
 }
 
 model TestResult {
-  id         String   @id @default(cuid())
-  platformId String
-  testCaseId String
-  status     String   // PASS | FAIL | PARTIAL | N/A
-  detail     String?
-  createdAt  DateTime @default(now())
-  updatedAt  DateTime @updatedAt
-  platform   Platform @relation(fields: [platformId], references: [id], onDelete: Cascade)
-  testCase   TestCase @relation(fields: [testCaseId], references: [id], onDelete: Restrict)
+  id            String    @id @default(cuid())
+  platformId    String
+  testCaseId    String
+  status        String    // PASS | FAIL | PARTIAL | N/A
+  detail        String?
+  testedAt      DateTime?
+  testedBy      String?
+  firmwareBuild String?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  platform      Platform  @relation(fields: [platformId], references: [id], onDelete: Cascade)
+  testCase      TestCase  @relation(fields: [testCaseId], references: [id], onDelete: Restrict)
 
   @@unique([platformId, testCaseId])
   @@index([platformId])
