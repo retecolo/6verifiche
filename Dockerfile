@@ -47,9 +47,13 @@ COPY --from=builder --chown=nextjs:nodejs /app/node_modules/@prisma/adapter-bett
 COPY --from=builder --chown=nextjs:nodejs /app/node_modules/@prisma/driver-adapter-utils ./node_modules/@prisma/driver-adapter-utils
 COPY --from=builder --chown=nextjs:nodejs /app/node_modules/async-mutex ./node_modules/async-mutex
 
+# Prisma CLI (devDep; needed for `prisma db push` at startup)
+COPY --from=builder --chown=nextjs:nodejs /app/node_modules/prisma ./node_modules/prisma
+COPY --from=builder --chown=nextjs:nodejs /app/node_modules/.bin/prisma ./node_modules/.bin/prisma
+
 USER nextjs
 
 EXPOSE 3000
 
 # Push any schema migrations at startup, then start the server
-CMD ["sh", "-c", "node -e \"require('@prisma/client')\" 2>/dev/null; npx --yes prisma db push --schema=prisma/schema.prisma 2>/dev/null || true; node server.js"]
+CMD ["sh", "-c", "node_modules/.bin/prisma db push --schema=prisma/schema.prisma 2>/dev/null || true; node server.js"]
