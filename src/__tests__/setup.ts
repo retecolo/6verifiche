@@ -12,6 +12,7 @@ export const testPrisma = new PrismaClient({ adapter });
 
 beforeEach(async () => {
   await testPrisma.testResult.deleteMany();
+  await testPrisma.configSnapshot.deleteMany();
   await testPrisma.testCase.deleteMany();
   await testPrisma.platform.deleteMany();
 });

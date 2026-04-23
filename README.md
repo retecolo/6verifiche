@@ -4,6 +4,8 @@ A web-based compliance tracking application for validating IPv6-only capabilitie
 
 The test suite covers the full IPv6-only stack: core protocols, all major routing protocols (OSPFv3, IS-IS, MP-BGP), MPLS (6PE, 6VPE, LDP), Segment Routing (SRv6, SR-MPLS), overlays (VXLAN, EVPN, GENEVE), multicast (MLDv2, PIM-SM/SSM, mVPN), high availability (BFD, VRRPv3, LFA), security (MACsec, uRPF, CoPP), modern management APIs (NETCONF, RESTCONF, gNMI, OpenConfig), and VPN/tunneling (IKEv2, GRE, L2TPv3). Each test case carries an RFC reference, a severity level (MANDATORY / RECOMMENDED / OPTIONAL), and searchable tags.
 
+Upload a device's running configuration and the app cross-references it against the compliance test cases, highlighting relevant config lines for each test.
+
 Built with **Next.js 16** (App Router), **Prisma 7** ORM, **SQLite**, and **Zod** input validation. Ships with a full REST API, Vitest test suite, and a Docker Compose setup optimised for IPv6-only deployment targets.
 
 ---
@@ -81,8 +83,6 @@ docker compose up --build -d
 docker compose exec app sh -c 'DATABASE_URL=file:/data/prod.db npx tsx scripts/seed.ts'
 ```
 
-> **Simpler approach:** run the seed locally pointing at the bind-mounted volume, or add a one-time seed command to the Compose `command` override.
-
 ### Accessing the app
 
 On an IPv6-only host:
@@ -158,7 +158,7 @@ Overview of all platforms with pass-rate statistics. Per-category breakdown show
 ### Platforms (`/platforms`)
 
 - **Add a platform** — fill in Vendor, Model Name, and OS/Firmware Version. The form validates input client-side and server-side (Zod).
-- **Delete a platform** — cascades and removes all associated test results.
+- **Delete a platform** — cascades and removes all associated test results and config snapshots.
 - **Compliance Matrix →** — link to the per-platform result entry page.
 
 ### Compliance Matrix (`/platforms/[id]`)
@@ -169,6 +169,17 @@ The main data-entry screen. Displays all 69 test cases grouped by category. For 
 - **Notes / Evidence** text field — free-text supporting notes.
 - Results **auto-save** immediately on status change, and 800 ms after the last keystroke in the notes field. A "✓ Saved" indicator confirms successful writes.
 - The header shows a live pass-rate summary.
+
+#### Configuration Snapshot panel
+
+Below the compliance matrix is the **Configuration Snapshot** panel, which links config file content to test cases:
+
+- **Upload** — drag-and-drop or click to browse for a plain-text config file (`.cfg`, `.conf`, `.txt`; max 5 MB). Multiple snapshots per platform are supported.
+- **Select a snapshot** — click any listed snapshot to load it in the viewer on the right.
+- **Find in Config** — once a snapshot is loaded, each compliance row shows a **Find** button. Clicking it highlights all lines in the config that are relevant to that test case (e.g. clicking the OSPFv3 row highlights lines containing `ospfv3`, `ospf3`, `ipv6 ospf`, etc.). The keyword sets for all test cases are defined in [`src/lib/config.keywords.ts`](src/lib/config.keywords.ts).
+- **Search** — free-text search within the loaded file; matches highlighted in blue alongside the keyword highlights.
+- **Matching only** toggle — collapses the viewer to show only matched lines, filtering out irrelevant config.
+- **Delete** — removes a snapshot from the database (does not affect compliance results).
 
 ### Test Cases (`/testcases`)
 
@@ -192,10 +203,15 @@ npm run test:coverage
 Tests use a **separate `prisma/test.db`** database that is created and destroyed automatically by the global setup/teardown hooks. The main `dev.db` is never touched during tests.
 
 **Test coverage:**
-- `src/__tests__/validation.test.ts` — Zod schema boundary tests (no DB required)
-- `src/__tests__/platform.service.test.ts` — Platform CRUD service tests
-- `src/__tests__/testcase.service.test.ts` — TestCase CRUD + upsert tests (covers tags serialization)
-- `src/__tests__/result.service.test.ts` — Result upsert, matrix, and update tests
+
+| File | What it covers |
+|------|---------------|
+| `src/__tests__/validation.test.ts` | Zod schema boundary tests — no DB required |
+| `src/__tests__/platform.service.test.ts` | Platform CRUD, pagination |
+| `src/__tests__/testcase.service.test.ts` | TestCase CRUD + upsert, tags serialization |
+| `src/__tests__/result.service.test.ts` | Result upsert, matrix query, update |
+| `src/__tests__/config.service.test.ts` | ConfigSnapshot CRUD |
+| `src/__tests__/config.keywords.test.ts` | Keyword matching, 1-based line numbers — no DB |
 
 ---
 
@@ -206,7 +222,7 @@ Tests use a **separate `prisma/test.db`** database that is created and destroyed
 | `npm run dev` | Start Next.js development server at http://localhost:3000 |
 | `npm run build` | Production build (outputs Next.js standalone bundle) |
 | `npm start` | Start the production Next.js server |
-| `npm run lint` | Run ESLint via Next.js lint config |
+| `npm run lint` | Run ESLint across `src/` |
 | `npm test` | Run all Vitest tests once |
 | `npm run test:watch` | Vitest in interactive watch mode |
 | `npm run test:coverage` | Vitest with V8 coverage report |
@@ -217,7 +233,7 @@ Tests use a **separate `prisma/test.db`** database that is created and destroyed
 
 ## API Reference
 
-All endpoints accept and return `application/json`. List endpoints support `?page=N&limit=N` query parameters (default: page 1, limit 50, max 200).
+All endpoints accept and return `application/json` unless noted. List endpoints support `?page=N&limit=N` query parameters (default: page 1, limit 50, max 200).
 
 ### Platforms
 
@@ -227,7 +243,7 @@ All endpoints accept and return `application/json`. List endpoints support `?pag
 | `POST` | `/api/platforms` | Create a platform |
 | `GET` | `/api/platforms/:id` | Get platform + all results |
 | `PUT` | `/api/platforms/:id` | Update platform fields |
-| `DELETE` | `/api/platforms/:id` | Delete platform (cascades results) |
+| `DELETE` | `/api/platforms/:id` | Delete platform (cascades results + config snapshots) |
 | `GET` | `/api/platforms/:id/results` | Full compliance matrix for one platform |
 
 **POST /api/platforms body:**
@@ -309,20 +325,39 @@ curl -6 -X POST http://[::1]:3000/api/results \
   }'
 ```
 
+### Config Snapshots
+
+| Method | Route | Description |
+|--------|-------|-------------|
+| `GET` | `/api/platforms/:id/config` | List snapshots for a platform (metadata only — no content) |
+| `POST` | `/api/platforms/:id/config` | Upload a config file (`multipart/form-data`, field `config`) |
+| `GET` | `/api/platforms/:id/config/:snapshotId` | Get full snapshot including file content |
+| `DELETE` | `/api/platforms/:id/config/:snapshotId` | Delete a snapshot |
+
+**POST /api/platforms/:id/config** — `multipart/form-data`, field name `config`:
+
+```bash
+curl -6 -X POST http://[::1]:3000/api/platforms/<id>/config \
+  -F "config=@/path/to/router.cfg"
+```
+
+Constraints: plain text, max **5 MB**. Content is stored verbatim in the SQLite database.
+
 ---
 
 ## Database Schema
 
-Three models managed by Prisma. Schema lives in [`prisma/schema.prisma`](prisma/schema.prisma).
+Four models managed by Prisma. Schema lives in [`prisma/schema.prisma`](prisma/schema.prisma).
 
 ```
 Platform
-  id          String    @id @default(cuid())
-  vendor      String
-  modelName   String
-  osVersion   String
-  createdAt   DateTime  @default(now())
-  results     TestResult[]
+  id              String           @id @default(cuid())
+  vendor          String
+  modelName       String
+  osVersion       String
+  createdAt       DateTime         @default(now())
+  results         TestResult[]
+  configSnapshots ConfigSnapshot[]
 
 TestCase
   id           String    @id @default(cuid())
@@ -348,9 +383,20 @@ TestResult
   firmwareBuild String?                         -- exact image tested (e.g. "17.9.3a")
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
+  platform      Platform  @relation(...)        -- onDelete: Cascade
+  testCase      TestCase  @relation(...)        -- onDelete: Restrict
   @@unique([platformId, testCaseId])
   @@index([platformId])
   @@index([testCaseId])
+
+ConfigSnapshot
+  id         String   @id @default(cuid())
+  platformId String
+  filename   String
+  content    String                             -- full plain-text file (max 5 MB)
+  uploadedAt DateTime @default(now())
+  platform   Platform @relation(...)            -- onDelete: Cascade
+  @@index([platformId])
 ```
 
 **Tags storage:** `tags` is stored as a JSON string in SQLite (e.g. `'["srv6","data-plane"]'`) and deserialized to `string[]` transparently by the service layer. The REST API always returns and accepts `tags` as a JSON array.
@@ -374,16 +420,19 @@ npx prisma generate
 │   │   │   │   ├── route.ts              # GET /api/platforms, POST
 │   │   │   │   └── [id]/
 │   │   │   │       ├── route.ts          # GET/PUT/DELETE /api/platforms/:id
-│   │   │   │       └── results/route.ts  # GET /api/platforms/:id/results
+│   │   │   │       ├── results/route.ts  # GET /api/platforms/:id/results
+│   │   │   │       └── config/
+│   │   │   │           ├── route.ts      # GET/POST /api/platforms/:id/config
+│   │   │   │           └── [snapshotId]/route.ts  # GET/DELETE snapshot
 │   │   │   ├── testcases/
 │   │   │   │   ├── route.ts              # GET/POST /api/testcases
 │   │   │   │   └── [id]/route.ts         # GET/PUT/DELETE /api/testcases/:id
 │   │   │   └── results/
-│   │   │       ├── route.ts              # GET/POST /api/results
+│   │   │       ├── route.ts              # GET/POST /api/results (upsert)
 │   │   │       └── [id]/route.ts         # GET/PUT/DELETE /api/results/:id
 │   │   ├── platforms/
 │   │   │   ├── page.tsx                  # Platform list + add form
-│   │   │   └── [id]/page.tsx             # Compliance matrix (69 tests)
+│   │   │   └── [id]/page.tsx             # Compliance matrix + config panel (69 tests)
 │   │   ├── testcases/page.tsx            # Test case browser
 │   │   ├── page.tsx                      # Dashboard
 │   │   ├── layout.tsx                    # Root layout with Nav
@@ -391,21 +440,28 @@ npx prisma generate
 │   ├── components/
 │   │   ├── Nav.tsx                       # Sticky navigation bar
 │   │   ├── PlatformForm.tsx              # Add-platform client form
-│   │   ├── ResultCell.tsx                # Auto-saving result row
-│   │   └── DeleteButton.tsx              # Confirm-then-delete client button
+│   │   ├── ResultCell.tsx                # Auto-saving result row (+ Find in Config)
+│   │   ├── DeleteButton.tsx              # Confirm-then-delete client button
+│   │   ├── PlatformComplianceSection.tsx # Client wrapper — lifts config/test-case state
+│   │   ├── ConfigUpload.tsx              # Upload + manage config snapshots
+│   │   └── ConfigViewer.tsx              # Config file viewer with keyword highlights
 │   ├── lib/
-│   │   ├── prisma.ts                     # Singleton PrismaClient
-│   │   ├── validation.ts                 # Zod schemas (TestCase, Result, Platform)
+│   │   ├── prisma.ts                     # Singleton PrismaClient (Prisma 7 + adapter)
+│   │   ├── validation.ts                 # Zod schemas for all API inputs
 │   │   ├── platform.service.ts           # Platform CRUD
 │   │   ├── testcase.service.ts           # TestCase CRUD + tags serialization
-│   │   └── result.service.ts             # Result CRUD + matrix query
+│   │   ├── result.service.ts             # Result CRUD + matrix query
+│   │   ├── config.service.ts             # ConfigSnapshot CRUD
+│   │   └── config.keywords.ts            # Keyword map + findMatchingLines()
 │   └── __tests__/
-│       ├── globalSetup.ts                # Create/destroy test.db
-│       ├── setup.ts                      # Clear tables before each test
+│       ├── globalSetup.ts                # Create/destroy prisma/test.db
+│       ├── setup.ts                      # Clear all tables before each test
 │       ├── validation.test.ts
 │       ├── platform.service.test.ts
 │       ├── testcase.service.test.ts
-│       └── result.service.test.ts
+│       ├── result.service.test.ts
+│       ├── config.service.test.ts
+│       └── config.keywords.test.ts
 ├── prisma/
 │   └── schema.prisma
 ├── scripts/
@@ -414,9 +470,10 @@ npx prisma generate
 ├── Dockerfile                            # Multi-stage build (node:20-alpine)
 ├── docker-compose.yml                    # IPv6-only deployment config
 ├── .dockerignore
+├── .github/workflows/ci.yml             # lint → test → build CI pipeline
 ├── vitest.config.ts
 ├── next.config.ts                        # standalone output + CORS headers
-└── IPv6-compliance-superset.md           # Source of truth for test case definitions
+└── IPv6-compliance-superset.md          # Source of truth for test case definitions
 ```
 
 ---
@@ -431,7 +488,11 @@ Edit `scripts/seed.ts`, add entries to the `TEST_CASES` array with `category`, `
 npm run seed
 ```
 
-The upsert logic means existing test results are never affected — only test case metadata is updated.
+The upsert logic means existing test results are never affected — only test case metadata is updated. Also add a matching entry to `TEST_CASE_KEYWORDS` in `src/lib/config.keywords.ts` — the key must match the `name` field exactly.
+
+### Extending config keyword matching
+
+Edit `src/lib/config.keywords.ts`. Each key is a test case name (must match `scripts/seed.ts` exactly); the value is an array of case-insensitive keyword strings tested against each config line. Vendor-specific terms (e.g. `crypto pki`, `set protocols ospf3`) can be added alongside the vendor-agnostic defaults.
 
 ### Adding custom test cases via API
 
@@ -446,16 +507,6 @@ curl -6 -X POST http://[::1]:3000/api/testcases \
     "severity": "OPTIONAL",
     "tags": ["srv6", "flex-algo", "traffic-engineering"]
   }'
-```
-
-### Filtering by severity
-
-Use the compliance matrix endpoint and filter client-side, or query the DB directly:
-
-```bash
-# All MANDATORY test cases (via API, paginate as needed)
-GET /api/testcases?limit=200
-# then filter response where severity === "MANDATORY"
 ```
 
 ### Switching to PostgreSQL

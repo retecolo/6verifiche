@@ -21,11 +21,13 @@ interface Props {
   platformId: string;
   testCase: TestCase;
   result: ExistingResult | null;
+  selectedName?: string | null;
+  onSelect?: (name: string) => void;
 }
 
 type SaveState = "idle" | "saving" | "saved" | "error";
 
-export default function ResultCell({ platformId, testCase, result }: Props) {
+export default function ResultCell({ platformId, testCase, result, selectedName, onSelect }: Props) {
   const [status, setStatus] = useState(result?.status ?? "");
   const [detail, setDetail] = useState(result?.detail ?? "");
   const [saveState, setSaveState] = useState<SaveState>("idle");
@@ -69,9 +71,10 @@ export default function ResultCell({ platformId, testCase, result }: Props) {
   }
 
   const badgeClass = status ? `badge badge-${status === "N/A" ? "NA" : status}` : "";
+  const isHighlighted = selectedName === testCase.name;
 
   return (
-    <tr>
+    <tr className={isHighlighted ? "config-highlighted-row" : undefined}>
       <td style={{ fontWeight: 500, whiteSpace: "nowrap" }}>{testCase.name}</td>
       <td className="description-cell">{testCase.description}</td>
       <td>
@@ -94,6 +97,17 @@ export default function ResultCell({ platformId, testCase, result }: Props) {
       <td>
         {status && <span className={badgeClass}>{status}</span>}
       </td>
+      {onSelect && (
+        <td>
+          <button
+            className={`btn btn-ghost config-find-btn${isHighlighted ? " active" : ""}`}
+            onClick={() => onSelect(testCase.name)}
+            title="Highlight this test case in the config viewer"
+          >
+            {isHighlighted ? "✓ Active" : "Find"}
+          </button>
+        </td>
+      )}
       <td>
         <span className={`save-indicator${saveState !== "idle" ? ` ${saveState}` : ""}`}>
           {saveState === "saving" && "Saving…"}

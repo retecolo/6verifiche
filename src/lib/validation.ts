@@ -42,7 +42,13 @@ export const PaginationSchema = z.object({
   limit: z.coerce.number().int().min(1).max(200).default(50),
 });
 
+export const ConfigUploadSchema = z.object({
+  filename: z.string().min(1).max(255).trim(),
+  content: z.string().min(1).max(5 * 1024 * 1024), // 5 MB text limit
+});
+
 export type PlatformInput = z.infer<typeof PlatformSchema>;
 export type TestCaseInput = z.infer<typeof TestCaseSchema>;
 export type ResultInput = z.infer<typeof ResultSchema>;
 export type ResultUpdateInput = z.infer<typeof ResultUpdateSchema>;
+export type ConfigUploadInput = z.infer<typeof ConfigUploadSchema>;

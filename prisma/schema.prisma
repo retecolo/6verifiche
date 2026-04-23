@@ -8,12 +8,24 @@ datasource db {
 }
 
 model Platform {
-  id        String       @id @default(cuid())
-  vendor    String
-  modelName String
-  osVersion String
-  createdAt DateTime     @default(now())
-  results   TestResult[]
+  id              String           @id @default(cuid())
+  vendor          String
+  modelName       String
+  osVersion       String
+  createdAt       DateTime         @default(now())
+  results         TestResult[]
+  configSnapshots ConfigSnapshot[]
+}
+
+model ConfigSnapshot {
+  id         String   @id @default(cuid())
+  platformId String
+  filename   String
+  content    String
+  uploadedAt DateTime @default(now())
+  platform   Platform @relation(fields: [platformId], references: [id], onDelete: Cascade)
+
+  @@index([platformId])
 }
 
 model TestCase {
