@@ -45,7 +45,6 @@ COPY --from=builder --chown=nextjs:nodejs /app/node_modules/bindings ./node_modu
 COPY --from=builder --chown=nextjs:nodejs /app/node_modules/file-uri-to-path ./node_modules/file-uri-to-path
 COPY --from=builder --chown=nextjs:nodejs /app/node_modules/@prisma/adapter-better-sqlite3 ./node_modules/@prisma/adapter-better-sqlite3
 COPY --from=builder --chown=nextjs:nodejs /app/node_modules/@prisma/driver-adapter-utils ./node_modules/@prisma/driver-adapter-utils
-COPY --from=builder --chown=nextjs:nodejs /app/node_modules/async-mutex ./node_modules/async-mutex
 
 # Prisma CLI (devDep; needed for `prisma db push` at startup)
 COPY --from=builder --chown=nextjs:nodejs /app/node_modules/prisma ./node_modules/prisma
