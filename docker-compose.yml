@@ -3,6 +3,7 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
+      network: host
     restart: unless-stopped
     ports:
       # Bind only on IPv6 — the final deployment host is IPv6-only.
