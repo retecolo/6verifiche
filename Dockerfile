@@ -48,12 +48,16 @@ COPY --from=builder --chown=nextjs:nodejs /app/node_modules/@prisma/driver-adapt
 
 # Prisma CLI (devDep; needed for `prisma db push` at startup)
 COPY --from=builder --chown=nextjs:nodejs /app/node_modules/prisma ./node_modules/prisma
-COPY --from=builder --chown=nextjs:nodejs /app/node_modules/.bin/prisma ./node_modules/.bin/prisma
 
 # Seed script + tsx runner (devDep; needed for `docker compose exec app node_modules/.bin/tsx scripts/seed.ts`)
 COPY --from=builder --chown=nextjs:nodejs /app/scripts ./scripts
 COPY --from=builder --chown=nextjs:nodejs /app/node_modules/tsx ./node_modules/tsx
-COPY --from=builder --chown=nextjs:nodejs /app/node_modules/.bin/tsx ./node_modules/.bin/tsx
+
+# Recreate symlinks — Docker COPY does not preserve them reliably
+RUN mkdir -p node_modules/.bin \
+  && ln -sf ../prisma/build/index.js node_modules/.bin/prisma \
+  && ln -sf ../tsx/dist/cli.mjs node_modules/.bin/tsx \
+  && chmod +x node_modules/prisma/build/index.js node_modules/tsx/dist/cli.mjs
 
 USER nextjs
 

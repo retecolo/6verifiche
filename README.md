@@ -80,7 +80,7 @@ The Compose file is configured for an **IPv6-only deployment target**. The appli
 docker compose up --build -d
 
 # Seed test cases inside the running container
-docker compose exec app sh -c 'DATABASE_URL=file:/data/prod.db npx tsx scripts/seed.ts'
+docker compose exec app sh -c 'DATABASE_URL=file:/data/prod.db node_modules/.bin/tsx scripts/seed.ts'
 ```
 
 ### Accessing the app
@@ -110,7 +110,7 @@ docker compose down -v
 
 - Next.js `output: 'standalone'` is enabled in `next.config.ts` — the Docker image runs the compiled `server.js` directly without a Node module install step at runtime.
 - The `HOSTNAME=::` environment variable tells Next.js's standalone server to bind on all IPv6 interfaces.
-- `npx prisma db push` runs automatically at container startup to apply any schema changes to the live database.
+- `prisma db push` runs automatically at container startup (via the bundled CLI at `node_modules/.bin/prisma`) to apply any schema changes to the live database.
 
 ---
 
