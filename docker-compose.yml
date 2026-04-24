@@ -9,10 +9,10 @@ services:
       # On dual-stack dev hosts, [::]:3000 also accepts IPv4-mapped connections.
       - "[::]:3000:3000"
     environment:
-      - NODE_ENV=production
-      - HOSTNAME=::
-      - PORT=3000
-      - DATABASE_URL=file:/data/prod.db
+      NODE_ENV: production
+      HOSTNAME: "::"
+      PORT: "3000"
+      DATABASE_URL: "file:/data/prod.db"
     volumes:
       # Persist the SQLite database outside the container
       - db-data:/data
