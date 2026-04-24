@@ -144,6 +144,51 @@ const TEST_CASES: TestCaseSeed[] = [
     severity: "RECOMMENDED",
     tags: ["core", "flow-label", "ecmp"],
   },
+  {
+    category: "Core IPv6 Protocols & Features",
+    name: "DHCPv6 Relay",
+    description:
+      "Verify the device relays DHCPv6 messages between clients on attached links and a remote DHCPv6 server per RFC 8415. Confirm correct relay-forward and relay-reply encapsulation, insertion of the Interface-ID (option 18) and Remote-ID (option 37) options, proper handling of the server unicast address option, and that relay messages are forwarded to the correct server address over an IPv6-only path.",
+    rfcReference: "RFC 8415",
+    severity: "MANDATORY",
+    tags: ["core", "dhcpv6", "relay", "addressing"],
+  },
+  {
+    category: "Core IPv6 Protocols & Features",
+    name: "DHCPv6 Prefix Delegation Relay (DHCPv6-PD)",
+    description:
+      "Verify the device relays DHCPv6 Prefix Delegation (PD) exchanges between requesting routers (downstream CPE) and a delegating DHCPv6-PD server. Confirm correct handling of the IA_PD option (option 25), relay-forward/relay-reply encapsulation across multiple hops, and that delegated prefixes propagate to downstream routers without assignment errors. Test prefix renewal and rebinding paths.",
+    rfcReference: "RFC 8415",
+    severity: "MANDATORY",
+    tags: ["core", "dhcpv6", "prefix-delegation", "relay"],
+  },
+  {
+    category: "Core IPv6 Protocols & Features",
+    name: "Router Advertisement Suppression",
+    description:
+      "Verify the device supports per-interface suppression of Router Advertisements (RAs). Confirm that RA suppress / no-ra configuration prevents unsolicited and solicited RA transmission on untrusted interfaces (e.g., access-facing, host-facing) while leaving RAs active on router-facing uplinks. Confirm RA suppression does not disrupt existing ND adjacencies or SLAAC on interfaces where RAs remain enabled.",
+    rfcReference: "RFC 4861",
+    severity: "MANDATORY",
+    tags: ["core", "router-advertisement", "security", "neighbor-discovery"],
+  },
+  {
+    category: "Core IPv6 Protocols & Features",
+    name: "Router Advertisement Options (RDNSS, DNSSL, Route Information)",
+    description:
+      "Verify support for extended RA options used in SLAAC-only deployments: RFC 8106 Recursive DNS Server (RDNSS, type 25) and DNS Search List (DNSSL, type 31) options for stateless DNS configuration, and RFC 4191 Route Information Option (type 24) for specific-prefix routing to non-default next hops. Confirm that hosts receive and correctly apply these options during SLAAC without requiring DHCPv6.",
+    rfcReference: "RFC 8106, RFC 4191",
+    severity: "RECOMMENDED",
+    tags: ["core", "router-advertisement", "rdnss", "dnssl", "slaac"],
+  },
+  {
+    category: "Core IPv6 Protocols & Features",
+    name: "RFC 8781 PREF64 RA Option",
+    description:
+      "Verify support for the PREF64 Router Advertisement option (RFC 8781, RA option type 38) for advertising the in-use NAT64 prefix to hosts. Confirm the device can include the PREF64 option in RAs with a supported prefix length (96, 64, 56, 48, 40, or 32 bits) and a configurable lifetime, enabling hosts to synthesize IPv6 addresses for IPv4 destinations without manual configuration.",
+    rfcReference: "RFC 8781",
+    severity: "RECOMMENDED",
+    tags: ["core", "router-advertisement", "pref64", "nat64", "transition"],
+  },
 
   // ── 3. IPv6 Routing & Forwarding ─────────────────────────────────────────────
   {
@@ -200,6 +245,15 @@ const TEST_CASES: TestCaseSeed[] = [
     severity: "RECOMMENDED",
     tags: ["routing", "bgp", "mpls", "labeled-unicast"],
   },
+  {
+    category: "IPv6 Routing & Forwarding",
+    name: "IPv4 NLRI with IPv6 Next Hop (RFC 8950)",
+    description:
+      "Verify BGP advertisement of IPv4 Network Layer Reachability Information (NLRI) with an IPv6 next hop per RFC 8950 (which updates RFC 5549). Confirm the device can send and receive IPv4 unicast prefixes encoded in the MP_REACH_NLRI attribute with an IPv6 next hop address, enabling IPv4 reachability across an IPv6-only underlay without a parallel IPv4 BGP session or IPv4 underlay addresses.",
+    rfcReference: "RFC 8950, RFC 5549",
+    severity: "MANDATORY",
+    tags: ["routing", "bgp", "ipv4", "ipv6-next-hop", "transition"],
+  },
 
   // ── 4. Security, Transition & Hardware ───────────────────────────────────────
   {
@@ -210,6 +264,22 @@ const TEST_CASES: TestCaseSeed[] = [
     rfcReference: "RFC 6105",
     severity: "MANDATORY",
     tags: ["security", "acl", "first-hop-security"],
+  },
+  {
+    category: "Security, Transition & Hardware",
+    name: "Simultaneous IPv4 and IPv6 ACL Enforcement",
+    description:
+      "Verify the device can apply both IPv4 and IPv6 ACLs concurrently on the same interface at line rate. Confirm that enabling IPv6 ACLs does not require removing or disabling existing IPv4 ACLs, and that both rulesets are processed in hardware (TCAM) without resource exhaustion, performance degradation, or CPU punting.",
+    severity: "MANDATORY",
+    tags: ["security", "acl", "ipv4", "hardware", "dual-stack"],
+  },
+  {
+    category: "Security, Transition & Hardware",
+    name: "IPv6 ACL Ingress and Egress Direction Restrictions",
+    description:
+      "Verify support for IPv6 ACL application in both ingress and egress directions on all forwarding interfaces. Document any hardware or ASIC restrictions on egress IPv6 ACLs (e.g., limited TCAM entries, no egress support on specific line cards). Confirm restrictions are disclosed in vendor release notes and that ingress ACLs are fully supported at line rate on all platforms.",
+    severity: "RECOMMENDED",
+    tags: ["security", "acl", "egress", "ingress", "hardware"],
   },
   {
     category: "Security, Transition & Hardware",

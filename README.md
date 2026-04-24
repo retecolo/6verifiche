@@ -1,6 +1,6 @@
 # IPv6 Compliance Tracker
 
-A web-based compliance tracking application for validating IPv6-only capabilities across network hardware platforms. Add vendors and models, then work through the **69-item compliance checklist** — recording PASS / FAIL / PARTIAL / N/A results with supporting notes inline.
+A web-based compliance tracking application for validating IPv6-only capabilities across network hardware platforms. Add vendors and models, then work through the **77-item compliance checklist** — recording PASS / FAIL / PARTIAL / N/A results with supporting notes inline.
 
 The test suite covers the full IPv6-only stack: core protocols, all major routing protocols (OSPFv3, IS-IS, MP-BGP), MPLS (6PE, 6VPE, LDP), Segment Routing (SRv6, SR-MPLS), overlays (VXLAN, EVPN, GENEVE), multicast (MLDv2, PIM-SM/SSM, mVPN), high availability (BFD, VRRPv3, LFA), security (MACsec, uRPF, CoPP), modern management APIs (NETCONF, RESTCONF, gNMI, OpenConfig), and VPN/tunneling (IKEv2, GRE, L2TPv3). Each test case carries an RFC reference, a severity level (MANDATORY / RECOMMENDED / OPTIONAL), and searchable tags.
 
@@ -124,14 +124,14 @@ npm run seed
 
 The seed script is **idempotent** — re-running it updates all metadata in place without creating duplicates or affecting existing test results. It upserts on the `(category, name)` unique key and syncs `description`, `rfcReference`, `severity`, and `tags` on every run.
 
-**69 test cases across 13 categories:**
+**77 test cases across 13 categories:**
 
 | Category | Count | Highlights |
 |----------|-------|------------|
 | Network Management & Telemetry | 9 | SSH, RADIUS, TACACS+, SNMP, syslog, NTP, DNS, NetFlow/IPFIX |
-| Core IPv6 Protocols & Features | 5 | ICMPv6/ND, SLAAC/DHCPv6, extension headers, PMTUD, flow label |
-| IPv6 Routing & Forwarding | 6 | RIPng, OSPFv3, IS-IS, MP-BGP, BGP ADD-PATH, BGP-LU |
-| Security, Transition & Hardware | 5 | ACLs/FHS, ASIC datapath, NAT64, CoPP, uRPF |
+| Core IPv6 Protocols & Features | 10 | ICMPv6/ND, SLAAC/DHCPv6, extension headers, PMTUD, flow label, DHCPv6 relay, DHCPv6-PD relay, RA suppression, RDNSS/DNSSL/route-info RA options, RFC 8781 PREF64 |
+| IPv6 Routing & Forwarding | 7 | RIPng, OSPFv3, IS-IS, MP-BGP, BGP ADD-PATH, BGP-LU, RFC 8950 (IPv4 NLRI/IPv6 next hop) |
+| Security, Transition & Hardware | 7 | ACLs/FHS, simultaneous IPv4+IPv6 ACLs, ingress/egress ACL restrictions, ASIC datapath, NAT64, CoPP, uRPF |
 | Connectivity & Validation | 3 | E2E traffic, log/monitor, certifications |
 | MPLS & Label Switching | 5 | 6PE, 6VPE, LDPoIPv6, MPLS BFD, RSVP-TE |
 | Segment Routing | 9 | SRv6 encap, endpoint behaviors, L3VPN, TE policy, IS-IS/OSPFv3 extensions, uSID, OAM, SR-MPLS |
@@ -185,6 +185,82 @@ Below the compliance matrix is the **Configuration Snapshot** panel, which links
 
 Read-only view of all seeded test cases grouped by category, showing RFC references, severity levels, and tags alongside result counts.
 
+### Admin (`/admin`)
+
+The admin section provides a full management UI for test cases and categories. Access it via the **Admin** link in the navigation bar.
+
+#### Test Cases (`/admin/testcases`)
+
+- **List** — all test cases grouped by category with severity badge, RFC reference, and tags. Edit or delete any row.
+- **New Test Case** — `/admin/testcases/new` — form with category autocomplete (datalist from existing categories), all fields, severity select, comma-separated tags.
+- **Edit** — `/admin/testcases/:id/edit` — pre-populated form using the same component.
+- **Delete** — removes the test case. Results referencing it are restricted (Prisma `onDelete: Restrict`) — delete associated results first.
+
+#### Categories (`/admin/categories`)
+
+- **List** — all categories with their test-case count.
+- **Rename** — click *Rename* on any row, edit inline, press Enter or click *Save*. The rename is applied atomically to all test cases in that category via `updateMany`.
+
+> **Auth note:** When `AUTH_MODE=none` (the default), a yellow warning banner is displayed at the top of every admin page as a reminder that the section is publicly accessible. Set `AUTH_MODE=cookie` or `AUTH_MODE=basic` to restrict access.
+
+---
+
+## Authentication
+
+Access control is configured via the `AUTH_MODE` environment variable. All three modes share the same `AUTH_USER` / `AUTH_PASS` credentials; `AUTH_SECRET` is only required for cookie mode.
+
+| `AUTH_MODE` | Description | Extra deps |
+|---|---|---|
+| `none` (default) | Open access — suitable for trusted networks or local dev | — |
+| `basic` | HTTP Basic Auth on every request — works with browsers and `curl -u user:pass` | — |
+| `cookie` | Login page at `/login`, signed 12-hour `httpOnly` session cookie | `jose` |
+
+### Environment variables
+
+| Variable | Required for | Description |
+|---|---|---|
+| `AUTH_MODE` | all | `none` \| `basic` \| `cookie` |
+| `AUTH_USER` | `basic`, `cookie` | Username |
+| `AUTH_PASS` | `basic`, `cookie` | Password |
+| `AUTH_SECRET` | `cookie` | JWT signing secret — minimum 32 random characters |
+
+### Local dev
+
+```bash
+# .env
+AUTH_MODE=cookie
+AUTH_USER=admin
+AUTH_PASS=hunter2
+AUTH_SECRET=dev-secret-not-for-production-use-32chars
+```
+
+### Docker
+
+Edit the `environment` block in `docker-compose.yml`:
+
+```yaml
+AUTH_MODE: "cookie"
+AUTH_USER: "admin"
+AUTH_PASS: "changeme"
+AUTH_SECRET: "replace-with-a-long-random-string-32-chars-min"
+```
+
+Generate a strong secret:
+
+```bash
+node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"
+```
+
+### Adding nextauth (multi-user)
+
+The `nextauth` stub is wired in `src/middleware.ts`. To activate it:
+
+1. `npm install next-auth@5`
+2. Add `User`, `Session`, `Account` tables to `prisma/schema.prisma` (see [Auth.js Prisma adapter docs](https://authjs.dev/getting-started/adapters/prisma))
+3. Create `src/auth.ts` with your `NextAuth({...})` config
+4. Replace the stub comment in `src/middleware.ts` with `export { auth as middleware } from '@/auth'`
+5. Set `AUTH_MODE=nextauth` — the dispatch block in middleware will be bypassed by the Auth.js handler
+
 ---
 
 ## Running Tests
@@ -212,6 +288,9 @@ Tests use a **separate `prisma/test.db`** database that is created and destroyed
 | `src/__tests__/result.service.test.ts` | Result upsert, matrix query, update |
 | `src/__tests__/config.service.test.ts` | ConfigSnapshot CRUD |
 | `src/__tests__/config.keywords.test.ts` | Keyword matching, 1-based line numbers — no DB |
+| `src/__tests__/auth.test.ts` | `signToken`/`verifyToken` round-trip, wrong secret, tampered token, missing `AUTH_SECRET` |
+| `src/__tests__/middleware.test.ts` | All three middleware modes (`none`, `basic`, `cookie`) — public path bypass, redirect, WWW-Authenticate |
+| `src/__tests__/auth.routes.test.ts` | Login endpoint (correct/wrong creds, cookie set), logout endpoint (cookie cleared) |
 
 ---
 
@@ -434,25 +513,39 @@ npx prisma generate
 │   │   │   ├── page.tsx                  # Platform list + add form
 │   │   │   └── [id]/page.tsx             # Compliance matrix + config panel (69 tests)
 │   │   ├── testcases/page.tsx            # Test case browser
+│   │   ├── admin/
+│   │   │   ├── layout.tsx                # Admin sub-nav + AUTH_MODE warning
+│   │   │   ├── page.tsx                  # Redirects to /admin/testcases
+│   │   │   ├── testcases/
+│   │   │   │   ├── page.tsx              # List all test cases (edit / delete)
+│   │   │   │   ├── new/page.tsx          # Create test case form
+│   │   │   │   └── [id]/edit/page.tsx    # Edit test case form
+│   │   │   └── categories/page.tsx       # List + inline rename categories
+│   │   ├── login/page.tsx                # Login page (AUTH_MODE=cookie only)
 │   │   ├── page.tsx                      # Dashboard
 │   │   ├── layout.tsx                    # Root layout with Nav
 │   │   └── globals.css                   # Application-wide styles
 │   ├── components/
-│   │   ├── Nav.tsx                       # Sticky navigation bar
+│   │   ├── Nav.tsx                       # Sticky navigation bar (Dashboard / Platforms / Test Cases / Admin)
 │   │   ├── PlatformForm.tsx              # Add-platform client form
 │   │   ├── ResultCell.tsx                # Auto-saving result row (+ Find in Config)
 │   │   ├── DeleteButton.tsx              # Confirm-then-delete client button
+│   │   ├── TestCaseForm.tsx              # Create/edit test case (category datalist, tags)
+│   │   ├── CategoryRenameRow.tsx         # Inline category rename row
+│   │   ├── LoginForm.tsx                 # Cookie-mode login form
 │   │   ├── PlatformComplianceSection.tsx # Client wrapper — lifts config/test-case state
 │   │   ├── ConfigUpload.tsx              # Upload + manage config snapshots
 │   │   └── ConfigViewer.tsx              # Config file viewer with keyword highlights
 │   ├── lib/
 │   │   ├── prisma.ts                     # Singleton PrismaClient (Prisma 7 + adapter)
+│   │   ├── auth.ts                       # signToken / verifyToken (jose / HS256)
 │   │   ├── validation.ts                 # Zod schemas for all API inputs
 │   │   ├── platform.service.ts           # Platform CRUD
-│   │   ├── testcase.service.ts           # TestCase CRUD + tags serialization
+│   │   ├── testcase.service.ts           # TestCase CRUD + tags + category helpers
 │   │   ├── result.service.ts             # Result CRUD + matrix query
 │   │   ├── config.service.ts             # ConfigSnapshot CRUD
 │   │   └── config.keywords.ts            # Keyword map + findMatchingLines()
+│   ├── middleware.ts                      # AUTH_MODE dispatch (none / basic / cookie)
 │   └── __tests__/
 │       ├── globalSetup.ts                # Create/destroy prisma/test.db
 │       ├── setup.ts                      # Clear all tables before each test
@@ -461,7 +554,10 @@ npx prisma generate
 │       ├── testcase.service.test.ts
 │       ├── result.service.test.ts
 │       ├── config.service.test.ts
-│       └── config.keywords.test.ts
+│       ├── config.keywords.test.ts
+│       ├── auth.test.ts                  # signToken/verifyToken unit tests
+│       ├── middleware.test.ts             # Middleware mode tests (none/basic/cookie)
+│       └── auth.routes.test.ts           # Login + logout API route tests
 ├── prisma/
 │   └── schema.prisma
 ├── scripts/

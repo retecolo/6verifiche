@@ -52,6 +52,30 @@ export const TEST_CASE_KEYWORDS: Record<string, string[]> = {
     "ipv6 address autoconfig", "ipv6 dhcp pool", "ipv6 dhcp relay",
     "prefix-delegation", "ipv6 enable",
   ],
+  "DHCPv6 Relay": [
+    "ipv6 dhcp relay", "dhcpv6 relay", "helper-address", "dhcp relay",
+    "relay-agent", "ipv6 helper", "relay destination", "relay forward",
+    "interface-id", "remote-id",
+  ],
+  "DHCPv6 Prefix Delegation Relay (DHCPv6-PD)": [
+    "prefix-delegation", "ia_pd", "ia-pd", "ipv6 dhcp relay",
+    "delegating-router", "requesting-router", "ipv6 dhcp pool",
+    "prefix hint", "dhcpv6 pd", "pd relay",
+  ],
+  "Router Advertisement Suppression": [
+    "nd suppress-ra", "no ipv6 nd ra suppress", "suppress-ra",
+    "ipv6 nd suppress-ra", "no ra", "ipv6 nd prefix", "router-advertisement",
+    "nd ra-interval", "ipv6 nd managed-config-flag",
+  ],
+  "Router Advertisement Options (RDNSS, DNSSL, Route Information)": [
+    "ipv6 nd dns-server", "ipv6 nd dns search-list", "rdnss", "dnssl",
+    "nd dns", "ipv6 nd prefix", "route-information", "nd route-info",
+    "ipv6 nd ra dns", "nd ra-lifetime",
+  ],
+  "RFC 8781 PREF64 RA Option": [
+    "pref64", "nat64 prefix", "ipv6 nat64", "nd prefix", "ra option",
+    "pref64-option", "nat64-prefix-ra", "ipv6 nd pref64",
+  ],
 
   // IPv6 Routing & Forwarding
   "RIPng": [
@@ -70,12 +94,28 @@ export const TEST_CASE_KEYWORDS: Record<string, string[]> = {
     "bgp router-id", "route-reflector", "neighbor activate",
     "redistribute bgp",
   ],
+  "IPv4 NLRI with IPv6 Next Hop (RFC 8950)": [
+    "ipv6 next-hop", "next-hop ipv6", "address-family ipv4",
+    "ipv4 unicast ipv6", "extended-nexthop", "extended nexthop",
+    "ipv4 reachability", "neighbor capability", "nexthop-encoding",
+    "route-map set ipv6 next-hop", "ipv4 nlri",
+  ],
 
   // Security, Transition & Hardware
   "IPv6 ACLs & First-Hop Security": [
     "ipv6 access-list", "ipv6 acl", "ipv6 traffic-filter",
     "ipv6 inspect", "ra-guard", "dhcp-guard", "ipv6 snooping",
     "binding table", "source-guard", "nd inspection",
+  ],
+  "Simultaneous IPv4 and IPv6 ACL Enforcement": [
+    "ip access-list", "ipv6 access-list", "ip access-group",
+    "ipv6 traffic-filter", "access-group", "access-class",
+    "tcam", "hardware access-list",
+  ],
+  "IPv6 ACL Ingress and Egress Direction Restrictions": [
+    "ipv6 traffic-filter", "ipv6 access-list", "access-group",
+    "in", "out", "egress", "ingress", "direction",
+    "ipv6 acl out", "ipv6 traffic-filter out",
   ],
   "Hardware / ASIC Datapath": [
     "ipv6 cef", "ipv6 forwarding", "hardware ipv6", "asic", "tcam",

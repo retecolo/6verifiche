@@ -69,3 +69,28 @@ export async function updateTestCase(id: string, data: Partial<TestCaseInput>) {
 export async function deleteTestCase(id: string) {
   return prisma.testCase.delete({ where: { id } });
 }
+
+export async function getCategories(): Promise<string[]> {
+  const rows = await prisma.testCase.findMany({
+    distinct: ['category'],
+    select: { category: true },
+    orderBy: { category: 'asc' },
+  });
+  return rows.map((r) => r.category);
+}
+
+export async function getCategoryCounts(): Promise<{ category: string; count: number }[]> {
+  const rows = await prisma.testCase.groupBy({
+    by: ['category'],
+    _count: { id: true },
+    orderBy: { category: 'asc' },
+  });
+  return rows.map((r) => ({ category: r.category, count: r._count.id }));
+}
+
+export async function renameCategory(oldName: string, newName: string) {
+  return prisma.testCase.updateMany({
+    where: { category: oldName },
+    data: { category: newName },
+  });
+}

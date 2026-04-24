@@ -12,10 +12,11 @@ export const metadata: Metadata = {
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
+  const showLogout = process.env.AUTH_MODE === 'cookie';
   return (
     <html lang="en" className={`${geistSans.variable} ${geistMono.variable}`}>
       <body>
-        <Nav />
+        <Nav showLogout={showLogout} />
         {children}
       </body>
     </html>
