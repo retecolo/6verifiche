@@ -80,7 +80,7 @@ The Compose file is configured for an **IPv6-only deployment target**. The appli
 docker compose up --build -d
 
 # Seed test cases inside the running container
-docker compose exec app sh -c 'DATABASE_URL=file:/data/prod.db node_modules/.bin/tsx scripts/seed.ts'
+docker compose exec app sh -c 'DATABASE_URL=file:/data/prod.db node scripts/seed.js'
 ```
 
 ### Accessing the app

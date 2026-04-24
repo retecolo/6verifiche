@@ -16,6 +16,11 @@ RUN npx prisma generate
 COPY . .
 RUN npm run build
 
+# Pre-compile seed script so the runner doesn't need tsx or esbuild
+RUN node_modules/.bin/esbuild scripts/seed.ts \
+      --bundle --platform=node --packages=external \
+      --outfile=scripts/seed.js
+
 # ── Production stage ──────────────────────────────────────────────────────────
 FROM node:20-alpine AS runner
 WORKDIR /app
@@ -49,17 +54,15 @@ COPY --from=builder --chown=nextjs:nodejs /app/node_modules/@prisma/driver-adapt
 # Prisma CLI (devDep; needed for `prisma db push` at startup)
 COPY --from=builder --chown=nextjs:nodejs /app/node_modules/prisma ./node_modules/prisma
 
-# Seed script + tsx runner + esbuild (devDeps; needed for `docker compose exec app node_modules/.bin/tsx scripts/seed.ts`)
-COPY --from=builder --chown=nextjs:nodejs /app/scripts ./scripts
-COPY --from=builder --chown=nextjs:nodejs /app/node_modules/tsx ./node_modules/tsx
-COPY --from=builder --chown=nextjs:nodejs /app/node_modules/esbuild ./node_modules/esbuild
-COPY --from=builder --chown=nextjs:nodejs /app/node_modules/@esbuild ./node_modules/@esbuild
+# Pre-compiled seed script (plain JS — no tsx/esbuild needed at runtime)
+COPY --from=builder --chown=nextjs:nodejs /app/scripts/seed.js ./scripts/seed.js
+# dotenv is imported by seed.js at runtime (silently ignores missing .env in Docker)
+COPY --from=builder --chown=nextjs:nodejs /app/node_modules/dotenv ./node_modules/dotenv
 
-# Recreate symlinks — Docker COPY does not preserve them reliably
+# Recreate prisma symlink — Docker COPY does not preserve symlinks reliably
 RUN mkdir -p node_modules/.bin \
   && ln -sf ../prisma/build/index.js node_modules/.bin/prisma \
-  && ln -sf ../tsx/dist/cli.mjs node_modules/.bin/tsx \
-  && chmod +x node_modules/prisma/build/index.js node_modules/tsx/dist/cli.mjs
+  && chmod +x node_modules/prisma/build/index.js
 
 USER nextjs
 
