@@ -1,3 +1,5 @@
+export const dynamic = 'force-dynamic';
+
 import { prisma } from "@/lib/prisma";
 
 export const metadata = { title: "Test Cases — IPv6 Compliance Tracker" };
