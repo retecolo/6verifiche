@@ -110,7 +110,7 @@ docker compose down -v
 
 - Next.js `output: 'standalone'` is enabled in `next.config.ts` — the Docker image runs the compiled `server.js` directly without a Node module install step at runtime.
 - The `HOSTNAME=::` environment variable tells Next.js's standalone server to bind on all IPv6 interfaces.
-- `prisma db push` runs automatically at container startup (via the bundled CLI at `node_modules/.bin/prisma`) to apply any schema changes to the live database.
+- `scripts/setup-db.js` runs automatically at container startup. It applies the SQLite schema via `better-sqlite3` directly (idempotent — `CREATE TABLE IF NOT EXISTS`), with no dependency on the Prisma CLI or any TypeScript loader.
 
 ---
 

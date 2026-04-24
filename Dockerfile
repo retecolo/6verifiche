@@ -39,30 +39,21 @@ COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
 COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
 COPY --from=builder --chown=nextjs:nodejs /app/public ./public
 
-# Prisma schema (for db push at startup) and generated client
-COPY --from=builder --chown=nextjs:nodejs /app/prisma ./prisma
+# Generated Prisma client
 COPY --from=builder --chown=nextjs:nodejs /app/node_modules/.prisma ./node_modules/.prisma
 COPY --from=builder --chown=nextjs:nodejs /app/node_modules/@prisma ./node_modules/@prisma
 
-# better-sqlite3 native addon and adapter (not automatically bundled by standalone)
+# better-sqlite3 native addon and adapter (not bundled by Next.js standalone)
 COPY --from=builder --chown=nextjs:nodejs /app/node_modules/better-sqlite3 ./node_modules/better-sqlite3
 COPY --from=builder --chown=nextjs:nodejs /app/node_modules/bindings ./node_modules/bindings
 COPY --from=builder --chown=nextjs:nodejs /app/node_modules/file-uri-to-path ./node_modules/file-uri-to-path
 COPY --from=builder --chown=nextjs:nodejs /app/node_modules/@prisma/adapter-better-sqlite3 ./node_modules/@prisma/adapter-better-sqlite3
 COPY --from=builder --chown=nextjs:nodejs /app/node_modules/@prisma/driver-adapter-utils ./node_modules/@prisma/driver-adapter-utils
 
-# Prisma CLI (devDep; needed for `prisma db push` at startup)
-COPY --from=builder --chown=nextjs:nodejs /app/node_modules/prisma ./node_modules/prisma
-
-# Pre-compiled seed script (plain JS — no tsx/esbuild needed at runtime)
+# Plain-JS scripts — no Prisma CLI or tsx needed at runtime
+COPY --from=builder --chown=nextjs:nodejs /app/scripts/setup-db.js ./scripts/setup-db.js
 COPY --from=builder --chown=nextjs:nodejs /app/scripts/seed.js ./scripts/seed.js
-# dotenv is imported by seed.js at runtime (silently ignores missing .env in Docker)
 COPY --from=builder --chown=nextjs:nodejs /app/node_modules/dotenv ./node_modules/dotenv
-
-# Recreate prisma symlink — Docker COPY does not preserve symlinks reliably
-RUN mkdir -p node_modules/.bin \
-  && ln -sf ../prisma/build/index.js node_modules/.bin/prisma \
-  && chmod +x node_modules/prisma/build/index.js
 
 RUN mkdir -p /data && chown nextjs:nodejs /data
 
@@ -70,5 +61,5 @@ USER nextjs
 
 EXPOSE 3000
 
-# Push any schema migrations at startup, then start the server
-CMD ["sh", "-c", "node_modules/.bin/prisma db push --schema=prisma/schema.prisma 2>/dev/null || true; node server.js"]
+# Create schema on first boot (idempotent), then start the server
+CMD ["sh", "-c", "node scripts/setup-db.js && node server.js"]
