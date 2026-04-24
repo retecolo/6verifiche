@@ -64,6 +64,8 @@ RUN mkdir -p node_modules/.bin \
   && ln -sf ../prisma/build/index.js node_modules/.bin/prisma \
   && chmod +x node_modules/prisma/build/index.js
 
+RUN mkdir -p /data && chown nextjs:nodejs /data
+
 USER nextjs
 
 EXPOSE 3000
