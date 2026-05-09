@@ -203,6 +203,8 @@ textarea { resize: vertical; min-height: 80px; }
 .btn-danger:hover { background: #b91c1c; text-decoration: none; color: #fff; }
 .btn-ghost { background: transparent; color: var(--fg-muted); border: 1px solid var(--border); }
 .btn-ghost:hover { background: var(--border); text-decoration: none; color: var(--fg); }
+.btn-secondary { background: var(--surface); color: var(--fg); border: 1px solid var(--border); }
+.btn-secondary:hover { background: var(--border); text-decoration: none; color: var(--fg); }
 .btn:disabled { opacity: 0.5; cursor: not-allowed; }
 
 /* ── Status badges ────────────────────────────────── */

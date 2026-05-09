@@ -53,7 +53,17 @@ export default async function PlatformDetailPage({ params }: Props) {
             &nbsp;·&nbsp; {passCount} PASS &nbsp;·&nbsp; {failCount} FAIL &nbsp;·&nbsp; {pct}% pass rate
           </p>
         </div>
-        <DeleteButton url={`/api/platforms/${id}`} label="Delete Platform" redirectTo="/platforms" />
+        <div style={{ display: "flex", gap: "0.75rem", alignItems: "center" }}>
+          <a
+            href={`/platforms/${id}/print`}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="btn btn-secondary"
+          >
+            Export PDF
+          </a>
+          <DeleteButton url={`/api/platforms/${id}`} label="Delete Platform" redirectTo="/platforms" />
+        </div>
       </div>
 
       {matrix.length === 0 ? (

@@ -56,7 +56,7 @@ echo 'DATABASE_URL="file:./dev.db"' > .env
 npx prisma db push
 npx prisma generate
 
-# 5. Seed all 69 compliance test cases
+# 5. Seed all 77 compliance test cases
 npm run seed
 
 # 6. Start the development server
@@ -163,12 +163,16 @@ Overview of all platforms with pass-rate statistics. Per-category breakdown show
 
 ### Compliance Matrix (`/platforms/[id]`)
 
-The main data-entry screen. Displays all 69 test cases grouped by category. For each row:
+The main data-entry screen. Displays all 77 test cases grouped by category. For each row:
 
 - **Status** dropdown — select PASS / FAIL / PARTIAL / N/A (or leave unset).
 - **Notes / Evidence** text field — free-text supporting notes.
 - Results **auto-save** immediately on status change, and 800 ms after the last keystroke in the notes field. A "✓ Saved" indicator confirms successful writes.
 - The header shows a live pass-rate summary.
+
+#### Export PDF
+
+The **Export PDF** button in the page header opens `/platforms/[id]/print` in a new tab. The print page is a standalone static HTML report (no nav, no form elements) that renders every test case with its full status and untruncated notes. Use the browser's **Save as PDF** option or the **Save as PDF / Print** button on the report page itself. The report includes a summary bar (pass rate, PASS / FAIL / PARTIAL / N/A counts) and is formatted with `@media print` styles for clean A4/Letter output.
 
 #### Configuration Snapshot panel
 
@@ -305,7 +309,7 @@ Tests use a **separate `prisma/test.db`** database that is created and destroyed
 | `npm test` | Run all Vitest tests once |
 | `npm run test:watch` | Vitest in interactive watch mode |
 | `npm run test:coverage` | Vitest with V8 coverage report |
-| `npm run seed` | Seed/update all 69 compliance test cases from `scripts/seed.ts` |
+| `npm run seed` | Seed/update all 77 compliance test cases from `scripts/seed.ts` |
 | `npm run db:reset` | Delete `dev.db`, re-push schema, and re-seed (destructive) |
 
 ---
@@ -343,6 +347,8 @@ All endpoints accept and return `application/json` unless noted. List endpoints 
 | `GET` | `/api/testcases/:id` | Get a test case |
 | `PUT` | `/api/testcases/:id` | Update a test case |
 | `DELETE` | `/api/testcases/:id` | Delete a test case |
+| `GET` | `/api/testcases/categories` | List categories with test-case counts |
+| `PATCH` | `/api/testcases/categories` | Rename a category (body: `{oldName, newName}`) |
 
 **POST /api/testcases body:**
 ```json
@@ -421,6 +427,31 @@ curl -6 -X POST http://[::1]:3000/api/platforms/<id>/config \
 ```
 
 Constraints: plain text, max **5 MB**. Content is stored verbatim in the SQLite database.
+
+### Auth
+
+Only active when `AUTH_MODE` is `basic` or `cookie`. In `none` mode these endpoints still exist but always succeed.
+
+| Method | Route                  | Description                                                       |
+|--------|------------------------|-------------------------------------------------------------------|
+| `POST` | `/api/auth/login`      | Validate credentials; sets `auth-session` cookie on success       |
+| `POST` | `/api/auth/logout`     | Clears the session cookie                                         |
+
+**POST /api/auth/login body:**
+
+```json
+{ "username": "admin", "password": "changeme" }
+```
+
+Returns `200` on success with an `httpOnly` session cookie (12-hour TTL, HS256 JWT). Returns `401` on bad credentials.
+
+### PDF Report
+
+| Method | Route                   | Description                                                              |
+|--------|-------------------------|--------------------------------------------------------------------------|
+| `GET`  | `/platforms/:id/print`  | Standalone HTML compliance report — open in browser and save as PDF      |
+
+This is a page route (not a JSON API). All test results and notes are rendered as static text; no form elements. Accepts `?autoprint=1` to trigger `window.print()` automatically on load.
 
 ---
 
@@ -505,13 +536,16 @@ npx prisma generate
 │   │   │   │           └── [snapshotId]/route.ts  # GET/DELETE snapshot
 │   │   │   ├── testcases/
 │   │   │   │   ├── route.ts              # GET/POST /api/testcases
-│   │   │   │   └── [id]/route.ts         # GET/PUT/DELETE /api/testcases/:id
+│   │   │   │   ├── [id]/route.ts         # GET/PUT/DELETE /api/testcases/:id
+│   │   │   │   └── categories/route.ts   # GET category counts / PATCH rename
 │   │   │   └── results/
 │   │   │       ├── route.ts              # GET/POST /api/results (upsert)
 │   │   │       └── [id]/route.ts         # GET/PUT/DELETE /api/results/:id
 │   │   ├── platforms/
 │   │   │   ├── page.tsx                  # Platform list + add form
-│   │   │   └── [id]/page.tsx             # Compliance matrix + config panel (69 tests)
+│   │   │   └── [id]/
+│   │   │       ├── page.tsx              # Compliance matrix + config panel (77 tests)
+│   │   │       └── print/route.ts        # GET — PDF-ready static compliance report
 │   │   ├── testcases/page.tsx            # Test case browser
 │   │   ├── admin/
 │   │   │   ├── layout.tsx                # Admin sub-nav + AUTH_MODE warning
@@ -561,7 +595,7 @@ npx prisma generate
 ├── prisma/
 │   └── schema.prisma
 ├── scripts/
-│   └── seed.ts                           # 69 compliance test cases across 13 categories
+│   └── seed.ts                           # 77 compliance test cases across 13 categories
 ├── .env                                  # DATABASE_URL (git-ignored)
 ├── Dockerfile                            # Multi-stage build (node:20-alpine)
 ├── docker-compose.yml                    # IPv6-only deployment config
@@ -611,7 +645,9 @@ Change `provider = "sqlite"` to `provider = "postgresql"` in `prisma/schema.pris
 
 ### Exporting results
 
-`GET /api/platforms/:id/results` returns the full compliance matrix as JSON — the platform record plus every test case with its result (null if untested). Suitable for piping into `jq` or feeding a reporting script:
+**PDF report:** Click the **Export PDF** button on any platform's compliance page (`/platforms/[id]`). This opens a standalone print page at `/platforms/[id]/print` with all test cases, statuses, and full untruncated notes rendered as static text. Use the browser's print dialog or the on-page **Save as PDF / Print** button.
+
+**JSON export:** `GET /api/platforms/:id/results` returns the full compliance matrix as JSON — the platform record plus every test case with its result (null if untested). Suitable for piping into `jq` or feeding a reporting script:
 
 ```bash
 curl -6 -s http://[::1]:3000/api/platforms/<id>/results | \
