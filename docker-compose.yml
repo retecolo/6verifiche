@@ -7,8 +7,9 @@ services:
       - "[::]:80:80"
       - "[::]:443:443"
     volumes:
-      - /var/run/docker.sock:/var/run/docker.sock:ro
+      # No Docker socket needed — routing is defined in traefik/dynamic/app.yml
       - ./traefik/traefik.yml:/traefik.yml:ro
+      - ./traefik/dynamic:/dynamic:ro
       - traefik-certs:/letsencrypt
     networks:
       - v6net
@@ -38,12 +39,6 @@ services:
       - db-data:/data
     networks:
       - v6net
-    labels:
-      - "traefik.enable=true"
-      - "traefik.http.routers.app.rule=Host(`yourdomain.example`)"
-      - "traefik.http.routers.app.entrypoints=websecure"
-      - "traefik.http.routers.app.tls.certresolver=letsencrypt"
-      - "traefik.http.services.app.loadbalancer.server.port=3000"
 
 networks:
   v6net:

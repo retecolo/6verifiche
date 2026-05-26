@@ -1,0 +1,27 @@
+http:
+  routers:
+    app:
+      rule: "Host(`yourdomain.example`)"
+      entryPoints:
+        - websecure
+      tls:
+        certResolver: letsencrypt
+      service: app
+
+    # HTTP router exists only to catch plain-HTTP requests and redirect them.
+    # The redirect itself is handled by the entrypoint-level redirections in
+    # traefik.yml; this router is here as a fallback for explicit HTTP rules.
+    app-insecure:
+      rule: "Host(`yourdomain.example`)"
+      entryPoints:
+        - web
+      service: app
+
+  services:
+    app:
+      loadBalancer:
+        servers:
+          # Docker internal DNS resolves "app" to the container's address on
+          # the shared v6net network. Traefik will connect over IPv6 or IPv4
+          # depending on what Docker assigns — both work.
+          - url: "http://app:3000"

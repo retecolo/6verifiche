@@ -37,12 +37,14 @@ entryPoints:
         certResolver: letsencrypt
 
 # ── Providers ─────────────────────────────────────────────────────────────────
+# File provider only — avoids mounting the Docker socket and the Docker API
+# version negotiation issue (Traefik's client defaults to 1.24; some daemons
+# require 1.40+). Routes are defined in /dynamic/app.yml. Traefik watches the
+# directory for changes so updates take effect without a restart.
 providers:
-  docker:
-    exposedByDefault: false   # only containers with traefik.enable=true are routed
-    # Use the explicitly-named network so Traefik reaches containers over IPv6.
-    # This matches the `name: v6net` entry in docker-compose.yml.
-    network: v6net
+  file:
+    directory: /dynamic
+    watch: true
 
 # ── Certificate resolvers (Let's Encrypt) ────────────────────────────────────
 certificatesResolvers:
