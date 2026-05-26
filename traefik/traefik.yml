@@ -1,0 +1,83 @@
+# Traefik v3 static configuration
+# ── Global ────────────────────────────────────────────────────────────────────
+global:
+  checkNewVersion: false
+  sendAnonymousUsage: false
+
+# ── API / dashboard ───────────────────────────────────────────────────────────
+# The dashboard is served by the api@internal service.
+# Route it through a labelled router in docker-compose (see traefik service
+# labels) so it sits behind TLS and, ideally, basic-auth middleware.
+api:
+  dashboard: true
+
+# ── Logging ───────────────────────────────────────────────────────────────────
+log:
+  level: INFO   # DEBUG for troubleshooting; WARN for quiet production
+
+# ── Entry points ─────────────────────────────────────────────────────────────
+# Both listeners are IPv6-only.  On a dual-stack host, [::]:N also accepts
+# IPv4-mapped connections (::ffff:0.0.0.0/96) unless the kernel has
+# IPV6_V6ONLY set — the default Docker/Linux behaviour allows v4-mapped.
+entryPoints:
+  web:
+    address: "[::]:80"
+    http:
+      redirections:
+        entryPoint:
+          to: websecure
+          scheme: https
+          permanent: true
+
+  websecure:
+    address: "[::]:443"
+    http:
+      tls:
+        # Apply the resolver to every TLS route that doesn't specify its own.
+        certResolver: letsencrypt
+
+# ── Providers ─────────────────────────────────────────────────────────────────
+providers:
+  docker:
+    exposedByDefault: false   # only containers with traefik.enable=true are routed
+    # Use the explicitly-named network so Traefik reaches containers over IPv6.
+    # This matches the `name: v6net` entry in docker-compose.yml.
+    network: v6net
+
+# ── Certificate resolvers (Let's Encrypt) ────────────────────────────────────
+certificatesResolvers:
+  letsencrypt:
+    acme:
+      # REQUIRED: replace with a real address — LE sends expiry notices here.
+      email: your-email@example.com
+
+      # Certificates are stored in the traefik-certs named volume.
+      # Traefik creates the file on first run with mode 0600.
+      storage: /letsencrypt/acme.json
+
+      # ── Challenge selection ──────────────────────────────────────────────
+      # HTTP-01 (default below): LE sends a GET to http://<domain>/.well-known/
+      # acme-challenge/<token>.  Works on IPv6-only hosts as long as:
+      #   • the domain has an AAAA record pointing at this host, AND
+      #   • port 80 is reachable from the internet.
+      # Let's Encrypt has validated over IPv6 since 2019.
+      httpChallenge:
+        entryPoint: web
+
+      # ── TLS-ALPN-01 ──────────────────────────────────────────────────────
+      # Alternative that uses port 443 instead of 80.
+      # Comment out httpChallenge above and uncomment this:
+      # tlsChallenge: {}
+
+      # ── DNS-01 ────────────────────────────────────────────────────────────
+      # Most reliable on IPv6-only hosts — no inbound port requirement.
+      # Requires DNS provider API credentials (env vars or secrets).
+      # Comment out httpChallenge above and uncomment + configure this:
+      # dnsChallenge:
+      #   provider: cloudflare       # or route53, digitalocean, etc.
+      #   resolvers:
+      #     - "[2606:4700:4700::1111]:53"   # Cloudflare v6 resolver
+      #     - "[2606:4700:4700::1001]:53"
+
+      # Staging CA — uncomment to test without hitting rate limits:
+      # caServer: https://acme-staging-v02.api.letsencrypt.org/directory

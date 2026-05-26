@@ -1,14 +1,25 @@
 services:
+  traefik:
+    image: traefik:v3.3
+    restart: unless-stopped
+    ports:
+      # Bind exclusively on IPv6 — dual-stack hosts also accept IPv4-mapped connections.
+      - "[::]:80:80"
+      - "[::]:443:443"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - ./traefik/traefik.yml:/traefik.yml:ro
+      - traefik-certs:/letsencrypt
+    networks:
+      - v6net
+
   app:
     build:
       context: .
       dockerfile: Dockerfile
       network: host
     restart: unless-stopped
-    ports:
-      # Bind only on IPv6 — the final deployment host is IPv6-only.
-      # On dual-stack dev hosts, [::]:3000 also accepts IPv4-mapped connections.
-      - "[::]:3000:3000"
+    # No direct port exposure — Traefik handles all ingress.
     environment:
       NODE_ENV: production
       HOSTNAME: "::"
@@ -27,9 +38,18 @@ services:
       - db-data:/data
     networks:
       - v6net
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.app.rule=Host(`yourdomain.example`)"
+      - "traefik.http.routers.app.entrypoints=websecure"
+      - "traefik.http.routers.app.tls.certresolver=letsencrypt"
+      - "traefik.http.services.app.loadbalancer.server.port=3000"
 
 networks:
   v6net:
+    # Explicit name prevents the Compose project-prefix so traefik.yml can
+    # reference it directly regardless of how the stack is invoked.
+    name: v6net
     enable_ipv6: true
     ipam:
       config:
@@ -37,3 +57,4 @@ networks:
 
 volumes:
   db-data:
+  traefik-certs:

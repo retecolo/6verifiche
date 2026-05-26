@@ -71,46 +71,104 @@ The app is now running at **http://localhost:3000**.
 
 ## Docker Compose (Production / IPv6-only host)
 
-The Compose file is configured for an **IPv6-only deployment target**. The application container binds exclusively to `::` (IPv6 any-address) and the internal Docker network is an IPv6 ULA subnet (`fd00:c0ff:ee::/64`).
+The Compose stack runs **Traefik v3** as a TLS-terminating reverse proxy in front of the Next.js app. Traefik listens on `[::]:80` and `[::]:443` (IPv6-only; dual-stack hosts also accept IPv4-mapped connections), redirects all HTTP to HTTPS, and obtains/renews Let's Encrypt certificates automatically. The app container no longer exposes a port directly — all ingress flows through Traefik over the shared `v6net` Docker network.
+
+### Prerequisites
+
+Complete these steps on the production host before starting the stack:
+
+**1. DNS** — Create an `AAAA` record for your domain pointing at the host's public IPv6 address. Let's Encrypt's HTTP-01 challenge validates over IPv6 when the domain resolves to only an `AAAA` record.
+
+**2. Docker daemon IPv6** — Enable IPv6 forwarding and `ip6tables` so containers can make outbound connections (required for ACME requests to Let's Encrypt). Edit `/etc/docker/daemon.json`:
+
+```json
+{
+  "ipv6": true,
+  "fixed-cidr-v6": "fd00:db8::/64",
+  "ip6tables": true
+}
+```
+
+Then restart the daemon: `sudo systemctl restart docker`.
+
+**3. Configure domain and email** — two files need your real values:
+
+```yaml
+# docker-compose.yml — update the app router rule label:
+- "traefik.http.routers.app.rule=Host(`your.real.domain`)"
+```
+
+```yaml
+# traefik/traefik.yml — set your Let's Encrypt notification address:
+email: your-email@example.com
+```
+
+### Staging test (recommended before first production run)
+
+Uncomment the `caServer` line in `traefik/traefik.yml` to use the Let's Encrypt staging CA. This avoids the production rate limit (5 certificates per registered domain per week) while verifying that DNS and port 80 are reachable from the internet.
+
+```yaml
+# traefik/traefik.yml
+caServer: https://acme-staging-v02.api.letsencrypt.org/directory
+```
+
+Re-comment or remove the line once a staging certificate is issued successfully, then run `docker compose down -v && docker compose up -d` to obtain a real certificate (the staging cert is not browser-trusted).
 
 ### First-time setup
 
 ```bash
-# Build the image and start the container
+# Build the image and start the full stack (Traefik + app)
 docker compose up --build -d
 
-# Seed test cases inside the running container
+# Seed test cases inside the running app container
 docker compose exec app sh -c 'DATABASE_URL=file:/data/prod.db node scripts/seed.js'
 ```
 
 ### Accessing the app
 
-On an IPv6-only host:
+Once DNS is in place and Let's Encrypt has issued a certificate:
 
 ```
-http://[::1]:3000/                    # loopback
-http://[fd00:c0ff:ee::2]:3000/        # container address on the v6net network
+https://your.real.domain/
 ```
 
-On a dual-stack dev machine the `[::]:3000` port binding also accepts IPv4-mapped connections at `http://localhost:3000`.
+Traefik handles the HTTP → HTTPS redirect automatically. The app container is not reachable on any port directly.
 
 ### Persistent data
 
-The SQLite database file is stored in a named Docker volume (`db-data`) mounted at `/data/prod.db` inside the container. It survives container restarts and image rebuilds.
+The SQLite database is stored in the `db-data` named volume at `/data/prod.db`. Let's Encrypt certificates are stored in a separate `traefik-certs` volume at `/letsencrypt/acme.json`. Both survive container restarts and image rebuilds.
 
 ```bash
 # Stop without removing volumes
 docker compose down
 
-# Remove everything including the database volume
+# Remove everything including both data volumes (certificates will be re-issued on next start)
 docker compose down -v
+```
+
+### Traefik dashboard (optional)
+
+The Traefik dashboard is enabled in `traefik/traefik.yml` but not routed by default. To expose it, add these labels to the `traefik` service in `docker-compose.yml`:
+
+```yaml
+labels:
+  - "traefik.enable=true"
+  - "traefik.http.routers.dashboard.rule=Host(`traefik.your.real.domain`)"
+  - "traefik.http.routers.dashboard.entrypoints=websecure"
+  - "traefik.http.routers.dashboard.tls.certresolver=letsencrypt"
+  - "traefik.http.routers.dashboard.service=api@internal"
+  - "traefik.http.routers.dashboard.middlewares=dash-auth"
+  # Generate the hash: echo $(htpasswd -nB admin) | sed 's/\$/\$\$/g'
+  - "traefik.http.middlewares.dash-auth.basicauth.users=admin:$$2y$$..."
 ```
 
 ### Docker notes
 
 - Next.js `output: 'standalone'` is enabled in `next.config.ts` — the Docker image runs the compiled `server.js` directly without a Node module install step at runtime.
-- The `HOSTNAME=::` environment variable tells Next.js's standalone server to bind on all IPv6 interfaces.
-- `scripts/setup-db.js` runs automatically at container startup. It applies the SQLite schema via `better-sqlite3` directly (idempotent — `CREATE TABLE IF NOT EXISTS`), with no dependency on the Prisma CLI or any TypeScript loader.
+- `HOSTNAME=::` tells Next.js's standalone server to bind on all IPv6 interfaces inside the container; Traefik reaches it via the shared `v6net` internal network.
+- `scripts/setup-db.js` runs automatically at container startup (idempotent `CREATE TABLE IF NOT EXISTS`), with no dependency on the Prisma CLI or any TypeScript loader.
+- The Docker network carries `name: v6net` explicitly so `traefik/traefik.yml` can reference it directly regardless of the Compose project name.
+- ACME challenge method: HTTP-01 is configured by default. If port 80 is firewalled, switch to TLS-ALPN-01 or DNS-01 in `traefik/traefik.yml` — see the inline comments in that file for all three options.
 
 ---
 
@@ -317,6 +375,8 @@ Tests use a **separate `prisma/test.db`** database that is created and destroyed
 ## API Reference
 
 All endpoints accept and return `application/json` unless noted. List endpoints support `?page=N&limit=N` query parameters (default: page 1, limit 50, max 200).
+
+> **Base URL:** local dev (`npm run dev`) → `http://localhost:3000`; Docker/production → `https://your.real.domain`. The examples below use `http://[::1]:3000` for local dev. Substitute your domain and `https://` for the Docker stack.
 
 ### Platforms
 
@@ -596,9 +656,11 @@ npx prisma generate
 │   └── schema.prisma
 ├── scripts/
 │   └── seed.ts                           # 77 compliance test cases across 13 categories
+├── traefik/
+│   └── traefik.yml                       # Traefik v3 static config (entrypoints, ACME, Docker provider)
 ├── .env                                  # DATABASE_URL (git-ignored)
 ├── Dockerfile                            # Multi-stage build (node:20-alpine)
-├── docker-compose.yml                    # IPv6-only deployment config
+├── docker-compose.yml                    # Traefik + app stack for IPv6-only deployment
 ├── .dockerignore
 ├── .github/workflows/ci.yml             # lint → test → build CI pipeline
 ├── vitest.config.ts
