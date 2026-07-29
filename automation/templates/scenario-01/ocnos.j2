@@ -1,0 +1,68 @@
+! ── Scenario 1: Management & Core IPv6 — OCNOS DUT ──────────────────────────
+hostname ocnos-dut
+
+interface Loopback0
+ ipv6 address {{ addresses.ocnos.loopback }}
+ no shutdown
+
+interface mgmt0
+ ipv6 address {{ addresses.ocnos.mgmt }}
+ no shutdown
+
+ipv6 route ::/0 {{ addresses.mgmt.gateway }}
+
+! SSH
+ip ssh version 2
+line vty 0 15
+ transport input ssh
+
+! RADIUS
+aaa new-model
+aaa authentication login default group radius local
+radius-server host {{ addresses.mgmt.radius }} auth-port 1812 acct-port 1813
+radius-server key RADIUS-SECRET
+
+! TACACS+
+tacacs-server host {{ addresses.mgmt.tacacs }}
+tacacs-server key TACACS-SECRET
+
+! Syslog
+logging host {{ addresses.mgmt.syslog }}
+logging trap informational
+logging source-interface Loopback0
+
+! SNMP
+snmp-server community PUBLIC ro
+snmp-server host {{ addresses.mgmt.snmp_manager }} traps version 2c PUBLIC
+snmp-server enable traps
+
+! NTP
+ntp server {{ addresses.mgmt.ntp }} prefer
+ntp source Loopback0
+
+! DNS
+ip domain-name {{ lab.domain }}
+ip name-server {{ addresses.mgmt.dns }}
+
+! Interfaces to MX204 peers
+interface et-0/0/0
+ description TO-MX204-1
+ mtu 9192
+ no shutdown
+ ipv6 address {{ addresses.p2p.ocnos_mx1 }}
+ ipv6 nd ra-suppress
+ ipv6 dhcp relay destination {{ addresses.mgmt.dhcpv6 }}
+
+interface et-0/0/1
+ description TO-MX204-2
+ mtu 9192
+ no shutdown
+ ipv6 address {{ addresses.p2p.ocnos_mx2 }}
+ ipv6 nd ra-suppress
+
+interface et-0/0/2
+ description TO-MX204-3
+ mtu 9192
+ no shutdown
+ ipv6 address {{ addresses.p2p.ocnos_mx3 }}
+ ipv6 nd ra-suppress

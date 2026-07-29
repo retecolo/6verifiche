@@ -1,0 +1,17 @@
+## Scenario 1: Management & Core IPv6 — MX204-1
+set system host-name mx204-1
+set system ntp server {{ addresses.mgmt.ntp }}
+set system syslog host {{ addresses.mgmt.syslog }} any any
+set system radius-server {{ addresses.mgmt.radius }} secret RADIUS-SECRET
+set system tacacs-server {{ addresses.mgmt.tacacs }} secret TACACS-SECRET
+
+set interfaces et-0/0/0 description TO-OCNOS
+set interfaces et-0/0/0 mtu 9192
+set interfaces et-0/0/0 unit 0 family inet6 address {{ addresses.mx204_1.p2p_ocnos }}
+set interfaces lo0 unit 0 family inet6 address {{ addresses.mx204_1.loopback }}
+
+set protocols router-advertisement interface et-0/0/0.0 no-advertisements
+
+set snmp community PUBLIC authorization read-only
+set snmp trap-group TRAPS version v2
+set snmp trap-group TRAPS targets {{ addresses.mgmt.snmp_manager }}
