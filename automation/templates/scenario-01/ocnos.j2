@@ -44,6 +44,11 @@ ntp source Loopback0
 ip domain-name {{ lab.domain }}
 ip name-server {{ addresses.mgmt.dns }}
 
+! NetFlow / IPFIX
+ip flow-export version 9
+ip flow-export destination {{ addresses.mgmt.flow_collector }} 4739
+ip flow-export source Loopback0
+
 ! Interfaces to MX204 peers
 interface et-0/0/0
  description TO-MX204-1
@@ -52,6 +57,10 @@ interface et-0/0/0
  ipv6 address {{ addresses.p2p.ocnos_mx1 }}
  ipv6 nd ra-suppress
  ipv6 dhcp relay destination {{ addresses.mgmt.dhcpv6 }}
+ ip flow ingress
+ ip flow egress
+ ipv6 flow ingress
+ ipv6 flow egress
 
 interface et-0/0/1
  description TO-MX204-2
@@ -59,6 +68,10 @@ interface et-0/0/1
  no shutdown
  ipv6 address {{ addresses.p2p.ocnos_mx2 }}
  ipv6 nd ra-suppress
+ ip flow ingress
+ ip flow egress
+ ipv6 flow ingress
+ ipv6 flow egress
 
 interface et-0/0/2
  description TO-MX204-3
@@ -66,3 +79,7 @@ interface et-0/0/2
  no shutdown
  ipv6 address {{ addresses.p2p.ocnos_mx3 }}
  ipv6 nd ra-suppress
+ ip flow ingress
+ ip flow egress
+ ipv6 flow ingress
+ ipv6 flow egress
