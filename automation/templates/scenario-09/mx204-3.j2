@@ -1,0 +1,12 @@
+## Scenario 9: Management APIs & VPN/Tunneling — MX204-3 (L2TPv3 peer)
+set system host-name mx204-3
+set interfaces et-0/0/0 mtu 9192
+set interfaces et-0/0/0 unit 0 family inet6 address {{ addresses.mx204_3.p2p_ocnos }}
+set interfaces lo0 unit 0 family inet6 address {{ addresses.mx204_3.loopback }}
+
+## L2TPv3 pseudowire
+set protocols l2circuit neighbor {{ addresses.p2p.ocnos_mx3 | replace('/127','') }} interface et-0/0/0.500 virtual-circuit-id 500
+set protocols l2circuit neighbor {{ addresses.p2p.ocnos_mx3 | replace('/127','') }} interface et-0/0/0.500 encapsulation-type ethernet-vlan
+
+set interfaces et-0/0/0 unit 500 encapsulation vlan-ccc
+set interfaces et-0/0/0 unit 500 vlan-id 500

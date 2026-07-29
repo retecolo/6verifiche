@@ -1,0 +1,70 @@
+- test_case:
+    category: "Segment Routing"
+    name: "SRv6 Encapsulation (H.Encaps / H.Insert)"
+  devices: [ocnos-dut]
+  commands:
+    - "show segment-routing srv6 sid"
+    - "show segment-routing srv6 encapsulation"
+    - "show ipv6 traffic | include SRH"
+
+- test_case:
+    category: "Segment Routing"
+    name: "SRv6 Endpoint Behaviors (End, End.X, End.DX6, End.DT6)"
+  devices: [ocnos-dut]
+  commands:
+    - "show segment-routing srv6 sid detail"
+    - "show segment-routing srv6 forwarding"
+    - "show ipv6 cef fcbb:0:1:0001:: detail"
+
+- test_case:
+    category: "Segment Routing"
+    name: "SRv6 L3VPN (BGP-SRv6 VPN)"
+  devices: [ocnos-dut, mx204-1, mx204-3]
+  commands:
+    - "show bgp vpnv6 unicast"
+    - "show bgp vpnv6 unicast vrf CUST-A"
+    - "show ipv6 route vrf CUST-A"
+    - "show segment-routing srv6 sid | include DT6"
+
+- test_case:
+    category: "Segment Routing"
+    name: "SRv6 Traffic Engineering (SRv6-TE Policy)"
+  devices: [ocnos-dut]
+  commands:
+    - "show segment-routing traffic-eng policy"
+    - "show segment-routing traffic-eng policy name TO-MX1-VIA-MX2 detail"
+    - "show segment-routing traffic-eng forwarding policy"
+
+- test_case:
+    category: "Segment Routing"
+    name: "SRv6 IS-IS Extensions"
+  devices: [ocnos-dut, mx204-1, mx204-2, mx204-3]
+  commands:
+    - "show isis database verbose | include SRv6"
+    - "show isis segment-routing srv6 locators"
+    - "show isis srv6 locator"
+
+- test_case:
+    category: "Segment Routing"
+    name: "SRv6 OSPFv3 Extensions"
+  devices: [ocnos-dut, mx204-2]
+  commands:
+    - "show ipv6 ospf database opaque-area"
+    - "show ipv6 ospf srv6 locator"
+    - "show segment-routing srv6 ospfv3"
+
+- test_case:
+    category: "Segment Routing"
+    name: "SRv6 Micro-SID (uSID)"
+  devices: [ocnos-dut, mx204-1, mx204-2, mx204-3]
+  commands:
+    - "show segment-routing srv6 sid | include usid"
+    - "show ipv6 cef fcbb:0:1:: detail"
+
+- test_case:
+    category: "Segment Routing"
+    name: "SRv6 OAM (Ping / Traceroute)"
+  devices: [ocnos-dut]
+  commands:
+    - "ping srv6 fcbb:0:2:0001:: source 2001:db8:0::1"
+    - "traceroute srv6 fcbb:0:2:0001:: source 2001:db8:0::1"

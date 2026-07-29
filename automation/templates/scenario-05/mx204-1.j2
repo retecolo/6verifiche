@@ -1,0 +1,31 @@
+## Scenario 5: SRv6 — MX204-1 (SRv6 locator fcbb:0:2::/48)
+set system host-name mx204-1
+set interfaces et-0/0/0 mtu 9192
+set interfaces et-0/0/0 unit 0 family inet6 address {{ addresses.mx204_1.p2p_ocnos }}
+set interfaces lo0 unit 0 family inet6 address {{ addresses.mx204_1.loopback }}
+
+## IS-IS
+set protocols isis interface et-0/0/0.0 level 2
+set protocols isis interface lo0.0 passive level 2
+set protocols isis level 2 wide-metrics-only
+
+## SRv6
+set protocols isis source-packet-routing srv6 locator MAIN end-sid fcbb:0:2:0001:: flavor psp-usd
+set protocols isis source-packet-routing srv6 locator MAIN locator-prefix {{ srv6.locator_mx1 }}
+
+set routing-options source-packet-routing srv6 locator MAIN {{ srv6.locator_mx1 }}
+set routing-options source-packet-routing srv6 no-reduced-srh
+
+## uSID
+set routing-options source-packet-routing srv6 micro-sid
+
+## BGP-SRv6 VPN
+set protocols bgp group IBGP type internal
+set protocols bgp group IBGP local-address {{ addresses.mx204_1.loopback | replace('/128','') }}
+set protocols bgp group IBGP neighbor {{ addresses.ocnos.loopback | replace('/128','') }}
+
+set protocols bgp group IBGP family inet6-vpn unicast
+set routing-instances CUST-A instance-type vrf
+set routing-instances CUST-A route-distinguisher 65001:201
+set routing-instances CUST-A vrf-target target:65001:200
+set routing-instances CUST-A routing-options rib CUST-A.inet6.0 static route 2001:db8:cafe:1::/64 reject

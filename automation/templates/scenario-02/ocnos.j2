@@ -1,0 +1,75 @@
+! ── Scenario 2: IGP Routing (OSPFv3, IS-IS, BFD, ECMP, LFA) — OCNOS DUT ───────
+
+! ── Interfaces ────────────────────────────────────────────────────────────────
+interface et-0/0/0
+ description TO-MX204-1
+ mtu 9192
+ no shutdown
+ ipv6 address {{ addresses.p2p.ocnos_mx1 }}
+ ipv6 ospf 1 area 0
+ isis ipv6 enable
+ ipv6 nd ra-suppress
+
+interface et-0/0/1
+ description TO-MX204-2
+ mtu 9192
+ no shutdown
+ ipv6 address {{ addresses.p2p.ocnos_mx2 }}
+ ipv6 ospf 1 area 0
+ isis ipv6 enable
+ ipv6 nd ra-suppress
+
+interface et-0/0/2
+ description TO-MX204-3
+ mtu 9192
+ no shutdown
+ ipv6 address {{ addresses.p2p.ocnos_mx3 }}
+ ipv6 ospf 1 area 0
+ isis ipv6 enable
+ ipv6 nd ra-suppress
+
+interface Loopback0
+ ipv6 address {{ addresses.ocnos.loopback }}
+ ipv6 ospf 1 area 0
+ isis ipv6 enable
+
+! ── OSPFv3 ────────────────────────────────────────────────────────────────────
+ipv6 router ospf 1
+ router-id 0.0.0.1
+ area 0 authentication ipsec spi 256 sha1 1234567890ABCDEF1234567890ABCDEF12345678
+ maximum-paths 3
+ fast-reroute per-prefix lfa
+ graceful-restart
+
+! ── IS-IS ─────────────────────────────────────────────────────────────────────
+router isis
+ net 49.0001.0000.0000.0001.00
+ is-type level-2-only
+ metric-style wide
+ address-family ipv6 unicast
+  maximum-paths 3
+  fast-reroute per-prefix
+  fast-reroute per-prefix ti-lfa
+ !
+ graceful-restart
+
+! ── BFD (referenced by OSPFv3 and IS-IS) ────────────────────────────────────
+bfd interval 150 min_rx 150 multiplier 3
+
+! Bind BFD to OSPFv3
+ipv6 router ospf 1
+ bfd all-interfaces
+
+! Bind BFD to IS-IS
+router isis
+ bfd all-interfaces
+
+! ── RIPng ─────────────────────────────────────────────────────────────────────
+ipv6 router rip RIP1
+ !
+interface et-0/0/0
+ ipv6 rip RIP1 enable
+interface et-0/0/1
+ ipv6 rip RIP1 enable
+interface et-0/0/2
+ ipv6 rip RIP1 enable

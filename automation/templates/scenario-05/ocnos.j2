@@ -1,0 +1,106 @@
+! ── Scenario 5: SRv6 — OCNOS DUT ─────────────────────────────────────────────
+
+! ── IS-IS underlay ────────────────────────────────────────────────────────────
+router isis
+ net 49.0001.0000.0000.0001.00
+ is-type level-2-only
+ metric-style wide
+ address-family ipv6 unicast
+
+interface et-0/0/0
+ mtu 9192
+ no shutdown
+ ipv6 address {{ addresses.p2p.ocnos_mx1 }}
+ isis ipv6 enable
+
+interface et-0/0/1
+ mtu 9192
+ no shutdown
+ ipv6 address {{ addresses.p2p.ocnos_mx2 }}
+ isis ipv6 enable
+
+interface et-0/0/2
+ mtu 9192
+ no shutdown
+ ipv6 address {{ addresses.p2p.ocnos_mx3 }}
+ isis ipv6 enable
+
+interface Loopback0
+ ipv6 address {{ addresses.ocnos.loopback }}
+ isis ipv6 enable
+
+! ── SRv6 Locator & SIDs ──────────────────────────────────────────────────────
+segment-routing srv6
+ locators
+  locator MAIN
+   prefix {{ srv6.locator_ocnos }}
+   behavior usid
+  !
+ !
+ sid-behaviors
+  local fcbb:0:1:0001:: behavior End
+  local fcbb:0:1:0002:: behavior End.X interface et-0/0/0
+  local fcbb:0:1:0003:: behavior End.X interface et-0/0/1
+  local fcbb:0:1:0004:: behavior End.DT6 vrf CUST-A
+  local fcbb:0:1:0005:: behavior End.DX6 interface et-0/0/0 nexthop {{ addresses.mx204_1.p2p_ocnos | replace('/127','') }}
+
+! ── IS-IS SRv6 extensions (RFC 9352) ─────────────────────────────────────────
+router isis
+ address-family ipv6 unicast
+  segment-routing srv6 locator MAIN
+
+! ── OSPFv3 SRv6 extensions (RFC 9513) ───────────────────────────────────────
+ipv6 router ospf 1
+ router-id 0.0.0.1
+ segment-routing srv6
+  locator MAIN
+
+! ── H.Encaps headend behavior ────────────────────────────────────────────────
+segment-routing srv6
+ encapsulation
+  source-address {{ addresses.ocnos.loopback | replace('/128','') }}
+  hop-limit 255
+
+! ── SRv6 L3VPN (BGP-SRv6 VPN) ───────────────────────────────────────────────
+vrf definition CUST-A
+ rd {{ lab.as_number }}:200
+ route-target export {{ lab.as_number }}:200
+ route-target import {{ lab.as_number }}:200
+ address-family ipv6
+ exit-address-family
+
+router bgp {{ lab.as_number }}
+ bgp router-id 0.0.0.1
+ no bgp default ipv4-unicast
+
+ neighbor {{ addresses.mx204_1.loopback | replace('/128','') }} remote-as {{ lab.as_number }}
+ neighbor {{ addresses.mx204_1.loopback | replace('/128','') }} update-source Loopback0
+ neighbor {{ addresses.mx204_3.loopback | replace('/128','') }} remote-as {{ lab.as_number }}
+ neighbor {{ addresses.mx204_3.loopback | replace('/128','') }} update-source Loopback0
+
+ address-family vpnv6
+  neighbor {{ addresses.mx204_1.loopback | replace('/128','') }} activate
+  neighbor {{ addresses.mx204_1.loopback | replace('/128','') }} send-community extended
+  neighbor {{ addresses.mx204_3.loopback | replace('/128','') }} activate
+  neighbor {{ addresses.mx204_3.loopback | replace('/128','') }} send-community extended
+ exit-address-family
+
+ address-family ipv6 vrf CUST-A
+  network 2001:db8:cafe::/48
+  redistribute connected
+  segment-routing srv6
+   sid-alloc per-vrf
+   end-dt6 locator MAIN
+ exit-address-family
+
+! ── SRv6-TE Policy ───────────────────────────────────────────────────────────
+segment-routing traffic-eng
+ policy TO-MX1-VIA-MX2
+  color 100 end-point {{ srv6.locator_mx1 | replace('::/48','0001::') }}
+  candidate-path
+   preference 100 explicit segment-list SL-VIA-MX2
+  !
+ !
+ segment-list SL-VIA-MX2
+  index 1 srv6 sid {{ srv6.locator_mx2 | replace('::/48','0001::') }}
+  index 2 srv6 sid {{ srv6.locator_mx1 | replace('::/48','0001::') }}

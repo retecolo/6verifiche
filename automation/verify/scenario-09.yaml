@@ -1,0 +1,84 @@
+- test_case:
+    category: "Modern Management APIs & Telemetry"
+    name: "NETCONF over IPv6"
+  devices: [ocnos-dut]
+  commands:
+    - "show running-config | include netconf"
+    - "show netconf-yang sessions"
+
+- test_case:
+    category: "Modern Management APIs & Telemetry"
+    name: "RESTCONF over IPv6"
+  devices: [ocnos-dut]
+  commands:
+    - "show running-config | include restconf"
+    - "show ip http server status"
+
+- test_case:
+    category: "Modern Management APIs & Telemetry"
+    name: "gNMI / gRPC Streaming Telemetry over IPv6"
+  devices: [ocnos-dut]
+  commands:
+    - "show running-config | include gnmi"
+    - "show grpc status"
+
+- test_case:
+    category: "Modern Management APIs & Telemetry"
+    name: "OpenConfig Model Support over IPv6"
+  devices: [ocnos-dut]
+  commands:
+    - "show running-config | include openconfig"
+    - "show yang modules"
+
+- test_case:
+    category: "Modern Management APIs & Telemetry"
+    name: "gRIBI / Programmable FIB over IPv6"
+  devices: [ocnos-dut]
+  commands:
+    - "show ipv6 route 2001:db8:test::/48"
+    - "show running-config | include gribi"
+
+- test_case:
+    category: "VPN & Tunneling"
+    name: "IPsec IKEv2 over IPv6"
+  devices: [ocnos-dut, mx204-1]
+  commands:
+    - "show crypto ikev2 sa"
+    - "show crypto ikev2 sa detail"
+    - "show crypto ipsec sa"
+    - "show interface Tunnel300"
+
+- test_case:
+    category: "VPN & Tunneling"
+    name: "GRE over IPv6 (GREv6)"
+  devices: [ocnos-dut, mx204-2]
+  commands:
+    - "show interface Tunnel400"
+    - "show interface Tunnel400 counters"
+
+- test_case:
+    category: "VPN & Tunneling"
+    name: "L2TPv3 over IPv6"
+  devices: [ocnos-dut, mx204-3]
+  commands:
+    - "show xconnect all"
+    - "show l2tpv3 session detail"
+    - "show bfd neighbors l2tpv3"
+
+- test_case:
+    category: "Connectivity & Validation"
+    name: "Certifications & Standards"
+  devices: [ocnos-dut]
+  commands:
+    - "show version"
+    - "show platform hardware"
+    - "show ipv6 neighbors"
+    - "show ipv6 general-prefix"
+
+- test_case:
+    category: "Network Management & Telemetry"
+    name: "Telnet"
+  devices: [ocnos-dut]
+  commands:
+    - "show running-config | include transport input"
+    - "show line vty 0 15"

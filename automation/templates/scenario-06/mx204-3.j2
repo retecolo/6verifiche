@@ -1,0 +1,22 @@
+## Scenario 6: Overlays & EVPN — MX204-3 (VTEP + GENEVE endpoint)
+set system host-name mx204-3
+set interfaces et-0/0/0 mtu 9192
+set interfaces et-0/0/0 unit 0 family inet6 address {{ addresses.mx204_3.p2p_ocnos }}
+set interfaces lo0 unit 0 family inet6 address {{ addresses.mx204_3.loopback }}
+
+set protocols isis interface et-0/0/0.0 level 2
+set protocols isis interface lo0.0 passive level 2
+
+set protocols bgp group IBGP type internal
+set protocols bgp group IBGP local-address {{ addresses.mx204_3.loopback | replace('/128','') }}
+set protocols bgp group IBGP neighbor {{ addresses.ocnos.loopback | replace('/128','') }}
+set protocols bgp group IBGP family evpn signaling
+
+set protocols evpn encapsulation vxlan
+set protocols evpn extended-vni-list 10010
+
+## GENEVE tunnel
+set interfaces gre unit 0 tunnel source {{ addresses.mx204_3.loopback | replace('/128','') }}
+set interfaces gre unit 0 tunnel destination {{ addresses.ocnos.loopback | replace('/128','') }}
+set interfaces gre unit 0 tunnel encapsulation geneve
+set interfaces gre unit 0 tunnel key 20010

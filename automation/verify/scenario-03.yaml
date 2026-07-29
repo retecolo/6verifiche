@@ -1,0 +1,58 @@
+- test_case:
+    category: "IPv6 Routing & Forwarding"
+    name: "MP-BGP"
+  devices: [ocnos-dut, mx204-1, mx204-2, mx204-3]
+  commands:
+    - "show bgp summary"
+    - "show bgp ipv6 unicast"
+    - "show ipv6 route bgp"
+
+- test_case:
+    category: "IPv6 Routing & Forwarding"
+    name: "BGP ADD-PATH for IPv6"
+  devices: [ocnos-dut]
+  commands:
+    - "show bgp ipv6 unicast neighbors 2001:db8:13::1 received-routes"
+    - "show bgp ipv6 unicast neighbors 2001:db8:13::1 advertised-routes"
+
+- test_case:
+    category: "IPv6 Routing & Forwarding"
+    name: "BGP Labeled Unicast (BGP-LU) for IPv6"
+  devices: [ocnos-dut, mx204-1]
+  commands:
+    - "show bgp ipv6 labeled-unicast"
+    - "show mpls label-binding"
+    - "show mpls forwarding-table detail"
+
+- test_case:
+    category: "IPv6 Routing & Forwarding"
+    name: "IPv4 NLRI with IPv6 Next Hop (RFC 8950)"
+  devices: [ocnos-dut]
+  commands:
+    - "show bgp ipv4 unicast 198.51.100.1/32"
+    - "show bgp ipv4 unicast neighbors 2001:db8:14::1 received-routes"
+    - "show ipv4 route 198.51.100.1/32"
+
+- test_case:
+    category: "High Availability & Resiliency"
+    name: "NSF / Graceful Restart for IPv6"
+  devices: [ocnos-dut, mx204-1, mx204-2, mx204-3]
+  commands:
+    - "show bgp neighbors 2001:db8:12::1 | include graceful"
+    - "show bgp graceful-restart"
+
+- test_case:
+    category: "Connectivity & Validation"
+    name: "End-to-End Traffic Validation"
+  devices: [ocnos-dut]
+  commands:
+    - "show bgp ipv6 unicast"
+    - "show ipv6 route"
+
+- test_case:
+    category: "Connectivity & Validation"
+    name: "Log & Monitor Verification"
+  devices: [ocnos-dut]
+  commands:
+    - "show bgp event-history all"
+    - "show logging | include BGP"

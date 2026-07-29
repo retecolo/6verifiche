@@ -1,0 +1,104 @@
+! ── Scenario 6: Overlays & EVPN — OCNOS DUT ──────────────────────────────────
+
+! ── IS-IS underlay ────────────────────────────────────────────────────────────
+router isis
+ net 49.0001.0000.0000.0001.00
+ is-type level-2-only
+ metric-style wide
+ address-family ipv6 unicast
+
+interface et-0/0/0
+ mtu 9192
+ no shutdown
+ ipv6 address {{ addresses.p2p.ocnos_mx1 }}
+ isis ipv6 enable
+
+interface et-0/0/1
+ mtu 9192
+ no shutdown
+ ipv6 address {{ addresses.p2p.ocnos_mx2 }}
+ isis ipv6 enable
+
+interface et-0/0/2
+ mtu 9192
+ no shutdown
+ ipv6 address {{ addresses.p2p.ocnos_mx3 }}
+ isis ipv6 enable
+
+interface Loopback0
+ ipv6 address {{ addresses.ocnos.loopback }}
+ isis ipv6 enable
+
+! ── NVE / VTEP (VXLANv6) ─────────────────────────────────────────────────────
+interface nve1
+ no shutdown
+ source-interface Loopback0
+ host-reachability protocol bgp
+ !
+ member vni 10010
+  ingress-replication protocol bgp
+ !
+ member vni 10001 associate-vrf
+
+! ── VRF for IRB ───────────────────────────────────────────────────────────────
+vrf definition OVERLAY
+ rd {{ lab.as_number }}:300
+ route-target export {{ lab.as_number }}:300
+ route-target import {{ lab.as_number }}:300
+ address-family ipv6
+ exit-address-family
+
+! ── IRB / SVI ─────────────────────────────────────────────────────────────────
+interface Vlan10
+ vrf forwarding OVERLAY
+ ipv6 address 2001:db8:overlay:1::1/64
+ ip anycast-address
+
+! ── VLAN-to-VNI mapping ───────────────────────────────────────────────────────
+vlan 10
+ vn-segment 10010
+
+! ── BGP EVPN ─────────────────────────────────────────────────────────────────
+router bgp {{ lab.as_number }}
+ bgp router-id 0.0.0.1
+ no bgp default ipv4-unicast
+
+ neighbor {{ addresses.mx204_1.loopback | replace('/128','') }} remote-as {{ lab.as_number }}
+ neighbor {{ addresses.mx204_1.loopback | replace('/128','') }} update-source Loopback0
+ neighbor {{ addresses.mx204_1.loopback | replace('/128','') }} description iBGP-MX204-1-EVPN-RRC
+ neighbor {{ addresses.mx204_2.loopback | replace('/128','') }} remote-as {{ lab.as_number }}
+ neighbor {{ addresses.mx204_2.loopback | replace('/128','') }} update-source Loopback0
+ neighbor {{ addresses.mx204_2.loopback | replace('/128','') }} description iBGP-MX204-2-EVPN-RRC
+ neighbor {{ addresses.mx204_3.loopback | replace('/128','') }} remote-as {{ lab.as_number }}
+ neighbor {{ addresses.mx204_3.loopback | replace('/128','') }} update-source Loopback0
+ neighbor {{ addresses.mx204_3.loopback | replace('/128','') }} description iBGP-MX204-3-EVPN-RRC
+
+ address-family l2vpn evpn
+  neighbor {{ addresses.mx204_1.loopback | replace('/128','') }} activate
+  neighbor {{ addresses.mx204_1.loopback | replace('/128','') }} send-community extended
+  neighbor {{ addresses.mx204_1.loopback | replace('/128','') }} route-reflector-client
+  neighbor {{ addresses.mx204_2.loopback | replace('/128','') }} activate
+  neighbor {{ addresses.mx204_2.loopback | replace('/128','') }} send-community extended
+  neighbor {{ addresses.mx204_2.loopback | replace('/128','') }} route-reflector-client
+  neighbor {{ addresses.mx204_3.loopback | replace('/128','') }} activate
+  neighbor {{ addresses.mx204_3.loopback | replace('/128','') }} send-community extended
+  neighbor {{ addresses.mx204_3.loopback | replace('/128','') }} route-reflector-client
+ exit-address-family
+
+! ── EVPN Multi-Homing (ES-LAG) ──────────────────────────────────────────────
+evpn
+ ethernet-segment 1
+  identifier 0000.1122.3344.5566.7788
+  redundancy-mode all-active
+
+interface et-0/0/0
+ evpn ethernet-segment 1
+interface et-0/0/1
+ evpn ethernet-segment 1
+
+! ── GENEVE tunnel toward MX204-3 ─────────────────────────────────────────────
+interface geneve1
+ tunnel source {{ addresses.ocnos.loopback | replace('/128','') }}
+ tunnel destination {{ addresses.mx204_3.loopback | replace('/128','') }}
+ tunnel vni 20010
+ no shutdown

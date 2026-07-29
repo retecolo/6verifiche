@@ -1,0 +1,102 @@
+! ── Scenario 7: Multicast & High Availability — OCNOS DUT ────────────────────
+
+! ── IS-IS underlay ────────────────────────────────────────────────────────────
+router isis
+ net 49.0001.0000.0000.0001.00
+ is-type level-2-only
+ metric-style wide
+ address-family ipv6 unicast
+
+interface et-0/0/0
+ mtu 9192
+ no shutdown
+ ipv6 address {{ addresses.p2p.ocnos_mx1 }}
+ isis ipv6 enable
+
+interface et-0/0/1
+ mtu 9192
+ no shutdown
+ ipv6 address {{ addresses.p2p.ocnos_mx2 }}
+ isis ipv6 enable
+
+interface et-0/0/2
+ mtu 9192
+ no shutdown
+ ipv6 address {{ addresses.p2p.ocnos_mx3 }}
+ isis ipv6 enable
+
+interface Loopback0
+ ipv6 address {{ addresses.ocnos.loopback }}
+ isis ipv6 enable
+
+! ── MLDv2 ─────────────────────────────────────────────────────────────────────
+interface et-0/0/0
+ ipv6 mld version 2
+ ipv6 mld query-interval 60
+ ipv6 mld last-member-query-interval 1
+
+interface et-0/0/1
+ ipv6 mld version 2
+interface et-0/0/2
+ ipv6 mld version 2
+
+! ── PIM-SM for IPv6 ──────────────────────────────────────────────────────────
+ipv6 multicast-routing
+
+interface et-0/0/0
+ ipv6 pim sparse-mode
+
+interface et-0/0/1
+ ipv6 pim sparse-mode
+
+interface et-0/0/2
+ ipv6 pim sparse-mode
+
+interface Loopback0
+ ipv6 pim sparse-mode
+
+! Static RP for ff05::/16 (OCNOS as RP)
+ipv6 pim rp-address {{ addresses.ocnos.loopback | replace('/128','') }} ff05::/16
+
+! BSR candidate RP
+ipv6 pim bsr-candidate Loopback0 130
+ipv6 pim rp-candidate Loopback0 group-list ff00::/8 priority 0
+
+! ── PIM-SSM for IPv6 ─────────────────────────────────────────────────────────
+ipv6 pim ssm range SSM-RANGE
+!
+ipv6 access-list SSM-RANGE
+ permit ipv6 any ff35::/32
+
+! ── VRRPv3 for IPv6 ──────────────────────────────────────────────────────────
+interface et-0/0/0
+ vrrp 10 ipv6 2001:db8:12::ff
+ vrrp 10 ipv6 fe80::1 link-local
+ vrrp 10 priority 200
+ vrrp 10 preempt
+ vrrp 10 timers advertise 100
+
+! ── mVPN (NG-mVPN) over mLDP P2MP ───────────────────────────────────────────
+vrf definition MCAST-VPN
+ rd {{ lab.as_number }}:400
+ route-target export {{ lab.as_number }}:400
+ route-target import {{ lab.as_number }}:400
+ address-family ipv6
+ exit-address-family
+
+! mLDP P2MP P-tunnel for mVPN
+mpls mldp
+
+multicast-routing vrf MCAST-VPN
+ address-family ipv6
+  mdt default mpls mldp P2MP {{ addresses.ocnos.loopback | replace('/128','') }}
+ exit-address-family
+
+! ── mLDP (Multipoint LDP) over IPv6 ─────────────────────────────────────────
+mpls ldp
+ address-family ipv6
+  mldp
+  discovery transport-address {{ addresses.ocnos.loopback | replace('/128','') }}
+  interface et-0/0/0
+  interface et-0/0/1
+  interface et-0/0/2

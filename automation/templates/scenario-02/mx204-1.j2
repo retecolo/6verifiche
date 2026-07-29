@@ -1,0 +1,35 @@
+## Scenario 2: IGP Routing — MX204-1
+set system host-name mx204-1
+set interfaces et-0/0/0 description TO-OCNOS
+set interfaces et-0/0/0 mtu 9192
+set interfaces et-0/0/0 unit 0 family inet6 address {{ addresses.mx204_1.p2p_ocnos }}
+set interfaces lo0 unit 0 family inet6 address {{ addresses.mx204_1.loopback }}
+
+## OSPFv3
+set protocols ospf3 area 0.0.0.0 interface et-0/0/0.0
+set protocols ospf3 area 0.0.0.0 interface lo0.0 passive
+set protocols ospf3 spf-options rapid-runs 3
+set protocols ospf3 graceful-restart
+
+## IS-IS
+set protocols isis interface et-0/0/0.0 level 2
+set protocols isis interface lo0.0 passive level 2
+set protocols isis level 2 wide-metrics-only
+set protocols isis source-packet-routing node-segment ipv6-index 101
+
+## BFD for OSPFv3
+set protocols ospf3 area 0.0.0.0 interface et-0/0/0.0 bfd-liveness-detection minimum-interval 150
+set protocols ospf3 area 0.0.0.0 interface et-0/0/0.0 bfd-liveness-detection multiplier 3
+
+## BFD for IS-IS
+set protocols isis interface et-0/0/0.0 bfd-liveness-detection minimum-interval 150
+set protocols isis interface et-0/0/0.0 bfd-liveness-detection multiplier 3
+
+## RIPng
+set protocols ripng group RIP neighbor et-0/0/0.0
+set protocols ripng group RIP export connected-v6
+
+## ECMP
+set policy-options policy-statement LOAD-BALANCE then load-balance per-flow
+set routing-options forwarding-table export LOAD-BALANCE
+set routing-options maximum-paths 3

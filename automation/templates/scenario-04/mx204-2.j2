@@ -1,0 +1,18 @@
+## Scenario 4: MPLS Label Switching — MX204-2 (P — MPLS transit)
+set system host-name mx204-2
+set interfaces et-0/0/0 mtu 9192
+set interfaces et-0/0/0 unit 0 family inet6 address {{ addresses.mx204_2.p2p_ocnos }}
+set interfaces lo0 unit 0 family inet6 address {{ addresses.mx204_2.loopback }}
+
+## IS-IS
+set protocols isis interface et-0/0/0.0 level 2
+set protocols isis interface lo0.0 passive level 2
+set protocols isis level 2 wide-metrics-only
+
+## LDP
+set protocols ldp interface et-0/0/0.0
+set protocols ldp transport-address {{ addresses.mx204_2.loopback | replace('/128','') }}
+
+## MPLS transit
+set protocols mpls interface et-0/0/0.0
+set protocols rsvp interface et-0/0/0.0

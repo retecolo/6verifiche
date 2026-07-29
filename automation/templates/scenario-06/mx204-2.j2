@@ -1,0 +1,22 @@
+## Scenario 6: Overlays & EVPN — MX204-2 (VTEP, ES-LAG peer)
+set system host-name mx204-2
+set interfaces et-0/0/0 mtu 9192
+set interfaces et-0/0/0 unit 0 family inet6 address {{ addresses.mx204_2.p2p_ocnos }}
+set interfaces lo0 unit 0 family inet6 address {{ addresses.mx204_2.loopback }}
+
+set protocols isis interface et-0/0/0.0 level 2
+set protocols isis interface lo0.0 passive level 2
+
+set protocols bgp group IBGP type internal
+set protocols bgp group IBGP local-address {{ addresses.mx204_2.loopback | replace('/128','') }}
+set protocols bgp group IBGP neighbor {{ addresses.ocnos.loopback | replace('/128','') }}
+set protocols bgp group IBGP family evpn signaling
+
+set protocols evpn encapsulation vxlan
+set protocols evpn extended-vni-list 10010
+
+## ES-LAG — same ESI as MX204-1 (shared CE)
+set interfaces ae0 esi 00:11:22:33:44:55:66:77:88:99
+set interfaces ae0 esi all-active
+set interfaces ae0 unit 0 family ethernet-switching interface-mode trunk
+set interfaces ae0 unit 0 family ethernet-switching vlan members 10

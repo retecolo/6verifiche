@@ -1,0 +1,24 @@
+## Scenario 5: SRv6 — MX204-3 (SRv6 PE, locator fcbb:0:4::/48)
+set system host-name mx204-3
+set interfaces et-0/0/0 mtu 9192
+set interfaces et-0/0/0 unit 0 family inet6 address {{ addresses.mx204_3.p2p_ocnos }}
+set interfaces lo0 unit 0 family inet6 address {{ addresses.mx204_3.loopback }}
+
+## IS-IS
+set protocols isis interface et-0/0/0.0 level 2
+set protocols isis interface lo0.0 passive level 2
+
+## SRv6
+set protocols isis source-packet-routing srv6 locator MAIN end-sid fcbb:0:4:0001:: flavor psp-usd
+set routing-options source-packet-routing srv6 locator MAIN {{ srv6.locator_mx3 }}
+set routing-options source-packet-routing srv6 micro-sid
+
+## BGP-SRv6 VPN
+set protocols bgp group IBGP type internal
+set protocols bgp group IBGP local-address {{ addresses.mx204_3.loopback | replace('/128','') }}
+set protocols bgp group IBGP neighbor {{ addresses.ocnos.loopback | replace('/128','') }}
+set protocols bgp group IBGP family inet6-vpn unicast
+
+set routing-instances CUST-A instance-type vrf
+set routing-instances CUST-A route-distinguisher 65001:202
+set routing-instances CUST-A vrf-target target:65001:200

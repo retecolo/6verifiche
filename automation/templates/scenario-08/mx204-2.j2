@@ -1,0 +1,12 @@
+## Scenario 8: Security — MX204-2 (uRPF source spoofing test)
+set system host-name mx204-2
+set interfaces et-0/0/0 mtu 9192
+set interfaces et-0/0/0 unit 0 family inet6 address {{ addresses.mx204_2.p2p_ocnos }}
+set interfaces lo0 unit 0 family inet6 address {{ addresses.mx204_2.loopback }}
+
+## IS-IS
+set protocols isis interface et-0/0/0.0 level 2
+set protocols isis interface lo0.0 passive level 2
+
+## uRPF test: generate packets with spoofed source to trigger OCNOS uRPF drop
+## MX204-2 should not see replies when OCNOS drops the spoofed-source packets

@@ -1,0 +1,33 @@
+## Scenario 6: Overlays & EVPN — MX204-1 (VTEP, ES-LAG peer)
+set system host-name mx204-1
+set interfaces et-0/0/0 mtu 9192
+set interfaces et-0/0/0 unit 0 family inet6 address {{ addresses.mx204_1.p2p_ocnos }}
+set interfaces lo0 unit 0 family inet6 address {{ addresses.mx204_1.loopback }}
+
+## IS-IS underlay
+set protocols isis interface et-0/0/0.0 level 2
+set protocols isis interface lo0.0 passive level 2
+
+## BGP EVPN
+set protocols bgp group IBGP type internal
+set protocols bgp group IBGP local-address {{ addresses.mx204_1.loopback | replace('/128','') }}
+set protocols bgp group IBGP neighbor {{ addresses.ocnos.loopback | replace('/128','') }}
+set protocols bgp group IBGP family evpn signaling
+
+## VXLAN
+set protocols evpn encapsulation vxlan
+set protocols evpn extended-vni-list 10010
+set protocols evpn vni-options vni 10010 vrf-target target:1:10010
+
+## IRB
+set interfaces irb unit 10 family inet6 address 2001:db8:overlay:1::2/64
+set interfaces irb unit 10 mac 00:00:5e:00:01:01
+
+## ES-LAG (all-active multi-homing)
+set interfaces ae0 aggregated-ether-options lacp active
+set interfaces ae0 aggregated-ether-options lacp periodic fast
+set interfaces ae0 esi 00:11:22:33:44:55:66:77:88:99
+set interfaces ae0 esi all-active
+set interfaces ae0 unit 0 family ethernet-switching interface-mode trunk
+set interfaces ae0 unit 0 family ethernet-switching vlan members 10
+set interfaces et-0/0/2 ether-options 802.3ad ae0
