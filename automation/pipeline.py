@@ -1,5 +1,7 @@
 import os
+import re
 from concurrent.futures import ThreadPoolExecutor, as_completed
+from datetime import datetime, timezone
 from pathlib import Path
 
 import yaml
@@ -136,3 +138,54 @@ def push_scenario(scenario: int, device_filter: str | None = None, workers: int 
             print(f"[{'OK' if ok else 'FAIL'}]   {name}")
 
     return results
+
+
+def _sanitise(cmd: str) -> str:
+    """Turn a CLI command into a safe filename segment."""
+    return re.sub(r"[^\w]", "_", cmd).strip("_")[:80]
+
+
+def verify_scenario(
+    scenario: int,
+    device_filter: str | None = None,
+    run_dir: Path | None = None,
+) -> Path:
+    verify_path = BASE_DIR / "verify" / f"scenario-{scenario:02d}.yaml"
+    with open(verify_path) as f:
+        specs = yaml.safe_load(f)
+
+    timestamp = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%S")
+    if run_dir is None:
+        run_dir = OUTPUT_DIR / f"scenario-{scenario:02d}-{timestamp}"
+    run_dir.mkdir(parents=True, exist_ok=True)
+
+    errors = []
+
+    for spec in specs:
+        tc = spec["test_case"]
+        spec_devices = spec.get("devices")
+        commands = spec.get("commands", [])
+
+        hosts = _filter_hosts(scenario, device_filter)
+        if spec_devices:
+            hosts = [h for h in hosts if h.name in spec_devices]
+
+        for host in hosts:
+            host_dir = run_dir / host.name
+            host_dir.mkdir(exist_ok=True)
+            try:
+                driver = DRIVERS[host.platform]()
+                outputs = driver.run_commands(host, commands)
+                for cmd, output in outputs.items():
+                    fname = _sanitise(cmd) + ".txt"
+                    (host_dir / fname).write_text(output)
+                    print(f"[OK]   {host.name} / {cmd}")
+            except Exception as exc:
+                msg = f"[FAIL] {host.name} ({tc['name']}): {exc}"
+                errors.append(msg)
+                print(msg)
+
+    if errors:
+        (run_dir / "errors.log").write_text("\n".join(errors))
+
+    return run_dir

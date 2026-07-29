@@ -3,7 +3,8 @@ import textwrap
 import pytest
 from pathlib import Path
 from unittest.mock import MagicMock, patch
-from pipeline import render_scenario, _load_vars, _filter_hosts
+import yaml
+from pipeline import render_scenario, _load_vars, _filter_hosts, verify_scenario
 
 
 TEMPLATES_DIR = Path(__file__).parent.parent / "templates"
@@ -58,3 +59,42 @@ class TestFilterHosts:
         hosts = _filter_hosts(scenario=1, device_filter="ocnos-dut")
         assert len(hosts) == 1
         assert hosts[0].name == "ocnos-dut"
+
+
+class TestVerifyScenario:
+    def test_creates_timestamped_output_dir(self, tmp_path, monkeypatch):
+        monkeypatch.setattr("pipeline.OUTPUT_DIR", tmp_path)
+
+        mock_driver = MagicMock()
+        mock_driver.run_commands.return_value = {"show ntp status": "stratum 2"}
+
+        with patch("pipeline.DRIVERS", {"ocnos": lambda: mock_driver, "junos": lambda: mock_driver}):
+            with patch("pipeline._filter_hosts") as mock_filter:
+                mock_host = MagicMock()
+                mock_host.name = "ocnos-dut"
+                mock_host.platform = "ocnos"
+                mock_filter.return_value = [mock_host]
+
+                out_dir = verify_scenario(scenario=1, device_filter="ocnos-dut")
+
+        assert out_dir.exists()
+        assert "scenario-01" in str(out_dir)
+
+    def test_writes_output_file_per_command(self, tmp_path, monkeypatch):
+        monkeypatch.setattr("pipeline.OUTPUT_DIR", tmp_path)
+
+        mock_driver_instance = MagicMock()
+        mock_driver_instance.run_commands.return_value = {"show ntp status": "stratum 2"}
+
+        with patch("pipeline.DRIVERS", {"ocnos": lambda: mock_driver_instance}):
+            with patch("pipeline._filter_hosts") as mock_filter:
+                mock_host = MagicMock()
+                mock_host.name = "ocnos-dut"
+                mock_host.platform = "ocnos"
+                mock_filter.return_value = [mock_host]
+
+                out_dir = verify_scenario(scenario=1, device_filter="ocnos-dut")
+
+        files = list(out_dir.glob("ocnos-dut/*.txt"))
+        assert len(files) >= 1
+        assert any("show_ntp_status" in f.name for f in files)
