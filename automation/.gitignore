@@ -1,0 +1,6 @@
+rendered/
+output/
+inventory/group_vars/all.yaml
+__pycache__/
+*.pyc
+.pytest_cache/
