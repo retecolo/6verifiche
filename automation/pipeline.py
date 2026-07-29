@@ -160,15 +160,16 @@ def verify_scenario(
     run_dir.mkdir(parents=True, exist_ok=True)
 
     errors = []
+    all_hosts = _filter_hosts(scenario, device_filter)
 
     for spec in specs:
         tc = spec["test_case"]
         spec_devices = spec.get("devices")
         commands = spec.get("commands", [])
 
-        hosts = _filter_hosts(scenario, device_filter)
+        hosts = all_hosts
         if spec_devices:
-            hosts = [h for h in hosts if h.name in spec_devices]
+            hosts = [h for h in all_hosts if h.name in spec_devices]
 
         for host in hosts:
             host_dir = run_dir / host.name
