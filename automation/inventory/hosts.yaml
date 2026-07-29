@@ -1,0 +1,35 @@
+ocnos-dut:
+  hostname: 2001:db8:mgmt::10
+  platform: ocnos
+  groups:
+    - ocnos
+    - lab
+  data:
+    scenarios: [1, 2, 3, 4, 5, 6, 7, 8, 9]
+
+mx204-1:
+  hostname: 2001:db8:12::1
+  platform: junos
+  groups:
+    - junos
+    - lab
+  data:
+    scenarios: [1, 2, 3, 4, 5, 6, 7, 8, 9]
+
+mx204-2:
+  hostname: 2001:db8:13::1
+  platform: junos
+  groups:
+    - junos
+    - lab
+  data:
+    scenarios: [1, 2, 3, 4, 5, 6, 7, 8, 9]
+
+mx204-3:
+  hostname: 2001:db8:14::1
+  platform: junos
+  groups:
+    - junos
+    - lab
+  data:
+    scenarios: [1, 2, 3, 4, 5, 6, 7, 8, 9]
