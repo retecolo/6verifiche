@@ -46,3 +46,11 @@ srv6:
   locator_mx1:   "fcbb:0:2::/48"
   locator_mx2:   "fcbb:0:3::/48"
   locator_mx3:   "fcbb:0:4::/48"
+
+secrets:
+  radius_key: "CHANGE-ME-RADIUS"
+  tacacs_key: "CHANGE-ME-TACACS"
+  ipsec_key: "CHANGE-ME-IPSEC"
+  snmp_community: "PUBLIC"
+  bgp_auth: "CHANGE-ME-BGP"
+  l2tp_key: "CHANGE-ME-L2TP"

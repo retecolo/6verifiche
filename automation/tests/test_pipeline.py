@@ -18,13 +18,13 @@ class TestLoadVars:
         assert "lab" in vars_
         assert vars_["addresses"]["mgmt"]["ntp"] == "2001:db8:mgmt::123"
 
-    def test_scenario_vars_merged_over_global(self, tmp_path, monkeypatch):
-        # Create a minimal scenario vars file
-        scenario_vars = tmp_path / "scenario-01.yaml"
-        scenario_vars.write_text("lab:\n  domain: override.example.com\n")
-        monkeypatch.setattr("pipeline.TEMPLATES_DIR", tmp_path.parent)
-        # _load_vars should merge, with scenario taking precedence
-        # (This test validates merge behaviour once implemented)
+    def test_scenario_vars_merged_over_global(self):
+        from pipeline import _deep_merge
+        base = {"lab": {"domain": "base.example.com", "as_number": 65001}}
+        override = {"lab": {"domain": "override.example.com"}}
+        result = _deep_merge(base, override)
+        assert result["lab"]["domain"] == "override.example.com"
+        assert result["lab"]["as_number"] == 65001  # preserved from base
 
 
 class TestRenderScenario:

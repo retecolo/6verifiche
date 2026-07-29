@@ -20,11 +20,11 @@ line vty 0 15
 aaa new-model
 aaa authentication login default group radius local
 radius-server host {{ addresses.mgmt.radius }} auth-port 1812 acct-port 1813
-radius-server key RADIUS-SECRET
+radius-server key {{ secrets.radius_key }}
 
 ! TACACS+
 tacacs-server host {{ addresses.mgmt.tacacs }}
-tacacs-server key TACACS-SECRET
+tacacs-server key {{ secrets.tacacs_key }}
 
 ! Syslog
 logging host {{ addresses.mgmt.syslog }}
@@ -32,8 +32,8 @@ logging trap informational
 logging source-interface Loopback0
 
 ! SNMP
-snmp-server community PUBLIC ro
-snmp-server host {{ addresses.mgmt.snmp_manager }} traps version 2c PUBLIC
+snmp-server community {{ secrets.snmp_community }} ro
+snmp-server host {{ addresses.mgmt.snmp_manager }} traps version 2c {{ secrets.snmp_community }}
 snmp-server enable traps
 
 ! NTP

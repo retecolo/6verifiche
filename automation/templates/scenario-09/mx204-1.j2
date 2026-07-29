@@ -16,7 +16,7 @@ set security ike policy IKEv2-POL proposals IKEv2-PROP
 set security ike gateway IKEv2-GW ike-policy IKEv2-POL
 set security ike gateway IKEv2-GW address {{ addresses.p2p.ocnos_mx1 | replace('/127','') }}
 set security ike gateway IKEv2-GW local-address {{ addresses.mx204_1.p2p_ocnos | replace('/127','') }}
-set security ike gateway IKEv2-GW pre-shared-key ascii-text IPSEC-SECRET
+set security ike gateway IKEv2-GW pre-shared-key ascii-text {{ secrets.ipsec_key }}
 set security ike gateway IKEv2-GW dead-peer-detection interval 30
 set security ike gateway IKEv2-GW dead-peer-detection threshold 5
 
