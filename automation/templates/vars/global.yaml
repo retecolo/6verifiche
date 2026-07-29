@@ -30,6 +30,16 @@ addresses:
     dns: "2001:db8:mgmt::53"
     dhcpv6: "2001:db8:mgmt::100"
     flow_collector: "2001:db8:mgmt::2055"
+  rfc8950:
+    ocnos_v4_loopback: "192.0.2.1/32"
+    mx3_v4_loopback: "198.51.100.1/32"
+  nat64:
+    inside_host: "192.168.1.10"
+    outside_addr: "2001:db8:64::10"
+    nat64_prefix: "2001:db8:64::/96"
+  tunnel:
+    gre_ocnos: "2001:db8:tun::1/127"
+    gre_mx3: "2001:db8:tun::2/127"
 
 srv6:
   locator_ocnos: "fcbb:0:1::/48"

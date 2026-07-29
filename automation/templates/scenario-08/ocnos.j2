@@ -157,13 +157,13 @@ interface et-0/0/0
  ipv6 address {{ addresses.p2p.ocnos_mx1 }}
 
 ! ── IPv6 Transition Mechanisms ────────────────────────────────────────────────
-ip nat inside source static tcp 192.168.1.10 80 2001:db8:64::10 80
+ip nat inside source static tcp {{ addresses.nat64.inside_host }} 80 {{ addresses.nat64.outside_addr }} 80
 
-ip dns64 2001:db8:64::/96
+ip dns64 {{ addresses.nat64.nat64_prefix }}
 
 interface Tunnel200
  description GRE-over-IPv6
- ipv6 address 2001:db8:tun::1/127
+ ipv6 address {{ addresses.tunnel.gre_ocnos }}
  tunnel source {{ addresses.ocnos.loopback | replace('/128','') }}
  tunnel destination {{ addresses.mx204_3.loopback | replace('/128','') }}
  tunnel mode gre ipv6

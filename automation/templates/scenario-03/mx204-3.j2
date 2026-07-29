@@ -21,7 +21,7 @@ set protocols bgp group EBGP-OCNOS neighbor {{ addresses.p2p.ocnos_mx3 }} family
 set protocols bgp group EBGP-OCNOS graceful-restart
 
 ## Advertise an IPv4 prefix for RFC 8950 testing
-set interfaces lo0 unit 0 family inet address 198.51.100.1/32
-set policy-options policy-statement EXPORT-V4 term 1 from route-filter 198.51.100.1/32 exact
+set interfaces lo0 unit 0 family inet address {{ addresses.rfc8950.mx3_v4_loopback }}
+set policy-options policy-statement EXPORT-V4 term 1 from route-filter {{ addresses.rfc8950.mx3_v4_loopback }} exact
 set policy-options policy-statement EXPORT-V4 term 1 then accept
 set protocols bgp group EBGP-OCNOS export EXPORT-V4

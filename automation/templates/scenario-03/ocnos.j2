@@ -71,5 +71,5 @@ router bgp {{ lab.as_number }}
  address-family ipv4 unicast
   neighbor {{ addresses.mx204_3.p2p_ocnos }} activate
   neighbor {{ addresses.mx204_3.p2p_ocnos }} capability extended-nexthop
-  network 192.0.2.1/32
+  network {{ addresses.rfc8950.ocnos_v4_loopback }}
  exit-address-family
