@@ -1,4 +1,5 @@
 import os
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from pathlib import Path
 
 import yaml
@@ -106,24 +107,32 @@ def render_scenario(scenario: int) -> dict[str, str]:
     return results
 
 
+def _push_one(host, config: str) -> tuple[str, bool]:
+    if not config:
+        print(f"[WARN] No rendered config for {host.name} — skipping")
+        return host.name, False
+    try:
+        driver = DRIVERS[host.platform]()
+        driver.push_config(host, config)
+        return host.name, True
+    except Exception as exc:
+        print(f"[FAIL] {host.name}: {exc}")
+        return host.name, False
+
+
 def push_scenario(scenario: int, device_filter: str | None = None, workers: int = 5) -> dict[str, bool]:
     rendered = render_scenario(scenario)
     hosts = _filter_hosts(scenario, device_filter)
     results = {}
 
-    for host in hosts:
-        config = rendered.get(host.name)
-        if config is None:
-            print(f"[WARN] No rendered config for {host.name} — skipping")
-            results[host.name] = False
-            continue
-        try:
-            driver = DRIVERS[host.platform]()
-            driver.push_config(host, config)
-            results[host.name] = True
-            print(f"[OK]   {host.name}")
-        except Exception as exc:
-            results[host.name] = False
-            print(f"[FAIL] {host.name}: {exc}")
+    with ThreadPoolExecutor(max_workers=workers) as executor:
+        futures = {
+            executor.submit(_push_one, host, rendered.get(host.name, "")): host
+            for host in hosts
+        }
+        for future in as_completed(futures):
+            name, ok = future.result()
+            results[name] = ok
+            print(f"[{'OK' if ok else 'FAIL'}]   {name}")
 
     return results
