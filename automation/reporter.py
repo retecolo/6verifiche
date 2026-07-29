@@ -1,6 +1,6 @@
-import os
 import socket
 import sqlite3
+import uuid
 import yaml
 from datetime import datetime, timezone
 from pathlib import Path
@@ -11,7 +11,6 @@ VERIFY_DIR = BASE_DIR / "verify"
 
 def _cuid_lite() -> str:
     """Simple unique ID — not a real cuid but sufficient for test rows."""
-    import uuid
     return "c" + uuid.uuid4().hex[:24]
 
 
@@ -35,7 +34,7 @@ def _get_or_create_platform(conn: sqlite3.Connection) -> str:
     return platform_id
 
 
-def _collect_detail(run_dir: Path, devices: list[str] | None, commands: list[str]) -> str:
+def _collect_detail(run_dir: Path, devices: list[str] | None) -> str:
     """Concatenate raw output files into a single detail string with separators."""
     blocks = []
     host_dirs = sorted(run_dir.iterdir()) if run_dir.exists() else []
@@ -66,7 +65,6 @@ def report_scenario(scenario: int, run_dir: Path, db_path: str) -> tuple[int, in
         tc = spec["test_case"]
         category, name = tc["category"], tc["name"]
         devices = spec.get("devices")
-        commands = spec.get("commands", [])
 
         row = conn.execute(
             "SELECT id FROM TestCase WHERE category = ? AND name = ?",
@@ -77,7 +75,7 @@ def report_scenario(scenario: int, run_dir: Path, db_path: str) -> tuple[int, in
             continue
         test_case_id = row[0]
 
-        detail = _collect_detail(run_dir, devices, commands)
+        detail = _collect_detail(run_dir, devices)
 
         existing = conn.execute(
             "SELECT id FROM TestResult WHERE platformId = ? AND testCaseId = ?",

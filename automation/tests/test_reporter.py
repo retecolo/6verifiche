@@ -1,8 +1,6 @@
 # automation/tests/test_reporter.py
 import sqlite3
-import tempfile
 from pathlib import Path
-from datetime import datetime, timezone
 
 import pytest
 from reporter import report_scenario
@@ -111,4 +109,4 @@ class TestReportScenario:
         # scenario-01.yaml has entries not seeded in the test DB — should skip loudly
         report_scenario(scenario=1, run_dir=run_dir, db_path=db_path)
         out = capsys.readouterr().out
-        assert "SKIP" in out or "not found" in out.lower() or True  # no crash
+        assert "SKIP" in out or "not found" in out.lower()
