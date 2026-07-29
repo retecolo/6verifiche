@@ -13,7 +13,10 @@ SCENARIOS = list(range(1, 10))
 def _parse_scenario(value: str) -> list[int]:
     if value == "all":
         return SCENARIOS
-    n = int(value)
+    try:
+        n = int(value)
+    except ValueError:
+        raise click.BadParameter(f"Scenario must be 1-9 or 'all', got '{value}'")
     if n not in SCENARIOS:
         raise click.BadParameter(f"Scenario must be 1-9 or 'all', got {n}")
     return [n]
@@ -93,6 +96,7 @@ def run_all(scenario, device, workers):
         click.echo("[ERROR] DATABASE_URL environment variable not set", err=True)
         sys.exit(1)
 
+    any_push_failure = False
     for n in _parse_scenario(scenario):
         click.echo(f"\n=== Scenario {n:02d} ===")
 
@@ -102,15 +106,26 @@ def run_all(scenario, device, workers):
         results = push_scenario(n, device_filter=device, workers=workers)
         failed_hosts = {h for h, ok in results.items() if not ok}
         if failed_hosts:
-            click.echo(f"[push] FAILED on: {', '.join(failed_hosts)} — skipping verify/report for those hosts")
+            click.echo(f"[push] FAILED on: {', '.join(sorted(failed_hosts))} — skipping verify/report for those hosts")
+            any_push_failure = True
 
-        # Verify only hosts that pushed successfully
-        success_filter = device if device and device not in failed_hosts else None
-        out_dir = verify_scenario(n, device_filter=success_filter)
+        succeeded = [name for name, ok in results.items() if ok]
+        if not succeeded:
+            click.echo(f"[all] No hosts succeeded push for scenario {n} — skipping verify/report")
+            continue
+
+        # Verify each succeeded host individually, accumulating output into one directory
+        out_dir = None
+        for host_name in succeeded:
+            out_dir = verify_scenario(n, device_filter=host_name, run_dir=out_dir)
         click.echo(f"[verify] output -> {out_dir}")
 
-        report_scenario(n, run_dir=out_dir, db_path=db_path)
-        click.echo(f"[report] done")
+        if out_dir:
+            report_scenario(n, run_dir=out_dir, db_path=db_path)
+            click.echo(f"[report] done")
+
+    if any_push_failure:
+        sys.exit(1)
 
 
 if __name__ == "__main__":
