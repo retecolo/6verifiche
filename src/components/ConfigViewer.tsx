@@ -14,13 +14,12 @@ export default function ConfigViewer({ content, testCaseName, isLoading }: Props
   const [showMatchOnly, setShowMatchOnly] = useState(false);
   const firstKwRef = useRef<HTMLSpanElement | null>(null);
 
-  const keywords = testCaseName ? (TEST_CASE_KEYWORDS[testCaseName] ?? []) : [];
-
   const kwRegex = useMemo(() => {
+    const keywords = testCaseName ? (TEST_CASE_KEYWORDS[testCaseName] ?? []) : [];
     if (keywords.length === 0) return null;
     const escaped = keywords.map((k) => k.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"));
     return new RegExp(escaped.join("|"), "i");
-  }, [keywords]);
+  }, [testCaseName]);
 
   const searchRegex = useMemo(() => {
     if (!search.trim()) return null;

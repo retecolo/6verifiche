@@ -1,6 +1,5 @@
 import { prisma } from "@/lib/prisma";
 import { getPlatformResultMatrix } from "@/lib/result.service";
-import { notFound } from "next/navigation";
 
 type RouteContext = { params: Promise<{ id: string }> };
 
