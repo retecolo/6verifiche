@@ -1,0 +1,3 @@
+# OCNOS-specific SSH defaults applied to all hosts in the ocnos group
+# Credentials are NOT stored here — use LAB_USERNAME / LAB_PASSWORD env vars
+port: 22

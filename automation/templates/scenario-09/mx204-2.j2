@@ -1,0 +1,14 @@
+## Scenario 9: Management APIs & VPN/Tunneling — MX204-2 (GRE peer)
+set system host-name mx204-2
+set interfaces et-0/0/0 mtu 9192
+set interfaces et-0/0/0 unit 0 family inet6 address {{ addresses.mx204_2.p2p_ocnos }}
+set interfaces lo0 unit 0 family inet6 address {{ addresses.mx204_2.loopback }}
+
+## GRE over IPv6 tunnel
+set interfaces gr-0/0/0 unit 0 tunnel source {{ addresses.mx204_2.p2p_ocnos | replace('/127','') }}
+set interfaces gr-0/0/0 unit 0 tunnel destination {{ addresses.p2p.ocnos_mx2 | replace('/127','') }}
+set interfaces gr-0/0/0 unit 0 family inet6 address 2001:db8:gre::2/127
+set interfaces gr-0/0/0 unit 0 keepalives interval 10 up-count 3
+
+## GRE MTU
+set interfaces gr-0/0/0 unit 0 family inet6 mtu 9152

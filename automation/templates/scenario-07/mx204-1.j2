@@ -1,0 +1,26 @@
+## Scenario 7: Multicast & HA — MX204-1 (PIM neighbor, VRRPv3 backup)
+set system host-name mx204-1
+set interfaces et-0/0/0 mtu 9192
+set interfaces et-0/0/0 unit 0 family inet6 address {{ addresses.mx204_1.p2p_ocnos }}
+set interfaces lo0 unit 0 family inet6 address {{ addresses.mx204_1.loopback }}
+
+## IS-IS
+set protocols isis interface et-0/0/0.0 level 2
+set protocols isis interface lo0.0 passive level 2
+
+## PIM-SM
+set protocols pim interface et-0/0/0.0 mode sparse
+set protocols pim rp static address {{ addresses.ocnos.loopback | replace('/128','') }}
+
+## MLDv2
+set protocols mld interface et-0/0/0.0 version 2
+
+## VRRPv3 (backup)
+set interfaces et-0/0/0 unit 0 family inet6 address {{ addresses.mx204_1.p2p_ocnos }}
+set protocols vrrp interface et-0/0/0.0 group 10 virtual-address 2001:db8:12::ff
+set protocols vrrp interface et-0/0/0.0 group 10 priority 100
+
+## mLDP
+set protocols ldp p2mp
+set protocols ldp interface et-0/0/0.0
+set protocols ldp transport-address {{ addresses.mx204_1.loopback | replace('/128','') }}

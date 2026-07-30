@@ -41,19 +41,23 @@ export default function PlatformComplianceSection({
   const [loadingContent, setLoadingContent] = useState(false);
 
   useEffect(() => {
-    if (!selectedSnapshotId) {
-      setSnapshotContent(null);
-      return;
-    }
-    setLoadingContent(true);
-    fetch(`/api/platforms/${platformId}/config/${selectedSnapshotId}`)
+    if (!selectedSnapshotId) return;
+    const controller = new AbortController();
+    Promise.resolve()
+      .then(() => setLoadingContent(true))
+      .then(() => fetch(`/api/platforms/${platformId}/config/${selectedSnapshotId}`, { signal: controller.signal }))
       .then((r) => r.json())
       .then((data) => {
         setSnapshotContent(data.content ?? null);
         setLoadingContent(false);
       })
-      .catch(() => setLoadingContent(false));
+      .catch((err: unknown) => {
+        if (err instanceof Error && err.name !== "AbortError") setLoadingContent(false);
+      });
+    return () => controller.abort();
   }, [selectedSnapshotId, platformId]);
+
+  const displayedContent = selectedSnapshotId ? snapshotContent : null;
 
   const grouped = matrix.reduce<Record<string, MatrixRow[]>>((acc, item) => {
     const cat = item.testCase.category;
@@ -120,7 +124,7 @@ export default function PlatformComplianceSection({
           }}
         />
         <ConfigViewer
-          content={snapshotContent}
+          content={displayedContent}
           testCaseName={selectedTestCaseName}
           isLoading={loadingContent}
         />

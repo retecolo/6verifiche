@@ -1,0 +1,17 @@
+## Scenario 8: Security — MX204-3 (ACL and FHS test traffic source)
+set system host-name mx204-3
+set interfaces et-0/0/0 mtu 9192
+set interfaces et-0/0/0 unit 0 family inet6 address {{ addresses.mx204_3.p2p_ocnos }}
+set interfaces lo0 unit 0 family inet6 address {{ addresses.mx204_3.loopback }}
+
+## IS-IS
+set protocols isis interface et-0/0/0.0 level 2
+set protocols isis interface lo0.0 passive level 2
+
+## ACL test — MX204-3 sends permitted and denied traffic for ACL verification
+set policy-options prefix-list PERMITTED-SRC 2001:db8:14::1/127
+set policy-options prefix-list SPOOFED-SRC 2001:db8:99::/48
+
+## FHS test — send RA toward OCNOS et-0/0/2 (should be blocked by RA Guard)
+set protocols router-advertisement interface et-0/0/0.0 min-interval 3
+set protocols router-advertisement interface et-0/0/0.0 max-interval 10

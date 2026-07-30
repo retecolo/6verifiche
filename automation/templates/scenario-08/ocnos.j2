@@ -1,0 +1,169 @@
+! ── Scenario 8: Security — OCNOS DUT ─────────────────────────────────────────
+
+! ── IS-IS underlay ────────────────────────────────────────────────────────────
+router isis
+ net 49.0001.0000.0000.0001.00
+ is-type level-2-only
+ metric-style wide
+ address-family ipv6 unicast
+
+interface Loopback0
+ ipv6 address {{ addresses.ocnos.loopback }}
+ isis ipv6 enable
+
+! ── Interfaces ────────────────────────────────────────────────────────────────
+interface et-0/0/0
+ description TO-MX204-1-MACSEC
+ mtu 9192
+ no shutdown
+ ipv6 address {{ addresses.p2p.ocnos_mx1 }}
+ isis ipv6 enable
+ macsec network-link
+
+interface et-0/0/1
+ description TO-MX204-2-URPF
+ mtu 9192
+ no shutdown
+ ipv6 address {{ addresses.p2p.ocnos_mx2 }}
+ isis ipv6 enable
+ ipv6 verify unicast source reachable-via rx
+
+interface et-0/0/2
+ description TO-MX204-3-ACL-TESTS
+ mtu 9192
+ no shutdown
+ ipv6 address {{ addresses.p2p.ocnos_mx3 }}
+ isis ipv6 enable
+ ipv6 access-group IPV6-INGRESS-ACL in
+ ipv6 access-group IPV6-EGRESS-ACL out
+ ip access-group IPV4-INGRESS-ACL in
+ ip access-group IPV4-EGRESS-ACL out
+
+! ── IPv6 ACLs ─────────────────────────────────────────────────────────────────
+ipv6 access-list IPV6-INGRESS-ACL
+ permit icmp any any nd-ns
+ permit icmp any any nd-na
+ permit icmp any any router-solicitation
+ permit tcp 2001:db8:14::/127 any eq 179
+ permit 89 any any
+ permit 124 any any
+ permit icmp any any echo sequence 10
+ permit icmp any any echo-reply sequence 11
+ deny ipv6 ::/8 any
+ deny ipv6 ff00::/8 any
+ deny ipv6 2001:db8:99::/48 any
+ permit ipv6 any any
+
+ipv6 access-list IPV6-EGRESS-ACL
+ permit ipv6 2001:db8::/32 any
+ deny ipv6 any any log
+
+! ── Simultaneous IPv4 ACL ─────────────────────────────────────────────────────
+ip access-list extended IPV4-INGRESS-ACL
+ permit ip 10.0.0.0 0.0.0.255 any
+ deny ip any any log
+
+ip access-list extended IPV4-EGRESS-ACL
+ permit ip any 10.0.0.0 0.0.0.255
+ deny ip any any log
+
+! ── First-Hop Security — RA Guard ─────────────────────────────────────────────
+ipv6 nd raguard policy UNTRUSTED
+ role router
+ deny
+
+interface et-0/0/2
+ ipv6 nd raguard attach-policy UNTRUSTED
+
+! ── First-Hop Security — ND Inspection ────────────────────────────────────────
+ipv6 nd inspection policy ND-INSPECT
+ validate source-mac
+ drop-unsolicited-na
+
+interface et-0/0/2
+ ipv6 nd inspection attach-policy ND-INSPECT
+
+! ── First-Hop Security — DHCPv6 Guard ────────────────────────────────────────
+ipv6 dhcp guard policy DHCP-UNTRUSTED
+ device-role client
+
+interface et-0/0/2
+ ipv6 dhcp guard attach-policy DHCP-UNTRUSTED
+
+! ── CoPP for IPv6 Control Plane ───────────────────────────────────────────────
+class-map match-any COPP-IPV6-ICMP
+ match protocol ipv6-icmp
+
+class-map match-any COPP-IPV6-BGP
+ match protocol tcp
+ match access-group name BGP-PERMIT
+
+class-map match-any COPP-IPV6-OSPF
+ match protocol ospfv3
+
+class-map match-any COPP-IPV6-ISIS
+ match protocol isis
+
+class-map match-any COPP-IPV6-ND
+ match protocol nd
+
+policy-map COPP-POLICY
+ class COPP-IPV6-ND
+  police rate 10000 pps conform-action transmit exceed-action drop
+ class COPP-IPV6-ICMP
+  police rate 5000 pps conform-action transmit exceed-action drop
+ class COPP-IPV6-BGP
+  police rate 2000 pps conform-action transmit exceed-action drop
+ class COPP-IPV6-OSPF
+  police rate 2000 pps conform-action transmit exceed-action drop
+ class COPP-IPV6-ISIS
+  police rate 2000 pps conform-action transmit exceed-action drop
+ class class-default
+  police rate 1000 pps conform-action transmit exceed-action drop
+
+control-plane
+ service-policy input COPP-POLICY
+
+! ── uRPF ─────────────────────────────────────────────────────────────────────
+interface et-0/0/0
+ ipv6 verify unicast source reachable-via any
+
+! ── MACsec (IEEE 802.1AE + MKA) ─────────────────────────────────────────────
+key chain MACSEC-KEYS macsec
+ key 01
+  key-octet-string CAFEBABE01234567CAFEBABE01234567CAFEBABE01234567CAFEBABE01234567
+  cryptographic-algorithm aes-256-cmac
+ !
+
+mka policy MKA-POLICY
+ macsec-cipher-suite gcm-aes-256
+ key-server-priority 100
+ include-icv-indicator
+ delay-protection
+ !
+
+interface et-0/0/0
+ mka policy MKA-POLICY
+ mka pre-shared-key key-chain MACSEC-KEYS
+ macsec replay-protection window-size 64
+ macsec encrypt
+
+! ── SRv6 over MACsec ─────────────────────────────────────────────────────────
+segment-routing srv6
+ locators
+  locator MACSEC-LINK
+   prefix {{ srv6.locator_ocnos }}
+interface et-0/0/0
+ ipv6 address {{ addresses.p2p.ocnos_mx1 }}
+
+! ── IPv6 Transition Mechanisms ────────────────────────────────────────────────
+ip nat inside source static tcp {{ addresses.nat64.inside_host }} 80 {{ addresses.nat64.outside_addr }} 80
+
+ip dns64 {{ addresses.nat64.nat64_prefix }}
+
+interface Tunnel200
+ description GRE-over-IPv6
+ ipv6 address {{ addresses.tunnel.gre_ocnos }}
+ tunnel source {{ addresses.ocnos.loopback | replace('/128','') }}
+ tunnel destination {{ addresses.mx204_3.loopback | replace('/128','') }}
+ tunnel mode gre ipv6

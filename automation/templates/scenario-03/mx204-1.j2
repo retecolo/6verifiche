@@ -1,0 +1,26 @@
+## Scenario 3: MP-BGP & Advanced Routing — MX204-1 (AS 65002 — eBGP + BGP-LU peer)
+set system host-name mx204-1
+set interfaces et-0/0/0 unit 0 family inet6 address {{ addresses.mx204_1.p2p_ocnos }}
+set interfaces lo0 unit 0 family inet6 address {{ addresses.mx204_1.loopback }}
+
+## eBGP to OCNOS
+set protocols bgp group EBGP-OCNOS type external
+set protocols bgp group EBGP-OCNOS peer-as {{ lab.as_number }}
+set protocols bgp group EBGP-OCNOS local-as 65002
+set protocols bgp group EBGP-OCNOS neighbor {{ addresses.p2p.ocnos_mx1 }} description TO-OCNOS
+
+## IPv6 unicast AF
+set protocols bgp group EBGP-OCNOS family inet6 unicast
+set protocols bgp group EBGP-OCNOS neighbor {{ addresses.p2p.ocnos_mx1 }} family inet6 unicast
+
+## BGP Labeled Unicast
+set protocols bgp group EBGP-OCNOS family inet6 labeled-unicast
+set protocols bgp group EBGP-OCNOS neighbor {{ addresses.p2p.ocnos_mx1 }} family inet6 labeled-unicast
+
+## Graceful Restart
+set protocols bgp group EBGP-OCNOS graceful-restart
+
+## Advertise loopback
+set policy-options policy-statement EXPORT-LOOPBACK term LO from route-filter {{ addresses.mx204_1.loopback }} exact
+set policy-options policy-statement EXPORT-LOOPBACK term LO then accept
+set protocols bgp group EBGP-OCNOS export EXPORT-LOOPBACK

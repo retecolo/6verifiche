@@ -1,0 +1,5 @@
+# Copy this file to all.yaml and fill in credentials.
+# all.yaml is gitignored — never commit it.
+# These values are overridden by LAB_USERNAME / LAB_PASSWORD env vars if set.
+username: admin
+password: CHANGEME

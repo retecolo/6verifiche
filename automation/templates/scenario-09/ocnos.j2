@@ -1,0 +1,124 @@
+! ── Scenario 9: Management APIs & VPN/Tunneling — OCNOS DUT ──────────────────
+
+! ── Interfaces ────────────────────────────────────────────────────────────────
+interface et-0/0/0
+ description TO-MX204-1-IPSEC
+ mtu 9192
+ no shutdown
+ ipv6 address {{ addresses.p2p.ocnos_mx1 }}
+
+interface et-0/0/1
+ description TO-MX204-2-GRE
+ mtu 9192
+ no shutdown
+ ipv6 address {{ addresses.p2p.ocnos_mx2 }}
+
+interface et-0/0/2
+ description TO-MX204-3-L2TPV3
+ mtu 9192
+ no shutdown
+ ipv6 address {{ addresses.p2p.ocnos_mx3 }}
+
+interface Loopback0
+ ipv6 address {{ addresses.ocnos.loopback }}
+
+interface mgmt0
+ ipv6 address {{ addresses.ocnos.mgmt }}
+
+! ── NETCONF over IPv6 (RFC 6241) ─────────────────────────────────────────────
+netconf-yang
+netconf ssh
+
+ip ssh version 2
+line vty 0 15
+ transport input ssh
+
+! ── RESTCONF over IPv6 (RFC 8040) ────────────────────────────────────────────
+restconf
+!
+ip http server
+ip http secure-server
+ip http authentication local
+
+! ── gNMI / gRPC Streaming Telemetry over IPv6 ────────────────────────────────
+gnmi-yang
+grpc port 9339
+grpc no-tls
+
+! ── gRIBI / Programmable FIB over IPv6 ───────────────────────────────────────
+gribi
+ aft-override
+
+! ── Telnet over IPv6 (OPTIONAL / legacy) ─────────────────────────────────────
+line vty 0 15
+ transport input ssh telnet
+
+! ── IPsec IKEv2 over IPv6 (RFC 7296) ────────────────────────────────────────
+crypto ikev2 proposal IKEv2-PROP
+ encryption aes-cbc-256
+ integrity sha512
+ group 20
+
+crypto ikev2 policy IKEv2-POL
+ proposal IKEv2-PROP
+ match fvrf global
+
+crypto ikev2 keyring IKEv2-KR
+ peer MX204-1
+  address {{ addresses.mx204_1.p2p_ocnos | replace('/127','') }}
+  pre-shared-key {{ secrets.ipsec_key }}
+ !
+
+crypto ikev2 profile IKEv2-PROFILE
+ match address local {{ addresses.p2p.ocnos_mx1 | replace('/127','') }}
+ match identity remote address {{ addresses.mx204_1.p2p_ocnos | replace('/127','') }}
+ authentication remote pre-share
+ authentication local pre-share
+ keyring local IKEv2-KR
+ dpd 30 5 periodic
+
+crypto ipsec transform-set TS esp-aes 256 esp-sha512-hmac
+ mode tunnel
+
+crypto ipsec profile IPSEC-PROFILE
+ set ikev2-profile IKEv2-PROFILE
+ set transform-set TS
+ set pfs group20
+
+interface Tunnel300
+ description IPSEC-TO-MX204-1
+ ipv6 address 2001:db8:ipsec::1/127
+ tunnel source {{ addresses.p2p.ocnos_mx1 | replace('/127','') }}
+ tunnel destination {{ addresses.mx204_1.p2p_ocnos | replace('/127','') }}
+ tunnel mode ipsec ipv6
+ tunnel protection ipsec profile IPSEC-PROFILE
+ no shutdown
+
+! ── GRE over IPv6 (RFC 7676) ─────────────────────────────────────────────────
+interface Tunnel400
+ description GRE-OVER-IPV6-TO-MX204-2
+ ipv6 address 2001:db8:gre::1/127
+ tunnel source {{ addresses.p2p.ocnos_mx2 | replace('/127','') }}
+ tunnel destination {{ addresses.mx204_2.p2p_ocnos | replace('/127','') }}
+ tunnel mode gre ipv6
+ keepalive 10 3
+ no shutdown
+
+interface Tunnel400
+ ip mtu 9152
+ ipv6 mtu 9152
+
+! ── L2TPv3 over IPv6 (RFC 3931) ──────────────────────────────────────────────
+pseudowire-class PW-L2TPV3
+ encapsulation l2tpv3
+ protocol l2tpv3
+ ip local interface et-0/0/2
+
+interface et-0/0/2.500
+ encapsulation dot1q 500
+ xconnect {{ addresses.mx204_3.p2p_ocnos | replace('/127','') }} 500 pw-class PW-L2TPV3
+
+l2tp-class L2TP-CLASS
+ hostname ocnos-dut
+ authentication
+ password {{ secrets.l2tp_key }}

@@ -1,0 +1,38 @@
+## Scenario 9: Management APIs & VPN/Tunneling — MX204-1 (IKEv2/IPsec peer)
+set system host-name mx204-1
+set interfaces et-0/0/0 mtu 9192
+set interfaces et-0/0/0 unit 0 family inet6 address {{ addresses.mx204_1.p2p_ocnos }}
+set interfaces lo0 unit 0 family inet6 address {{ addresses.mx204_1.loopback }}
+
+## IKEv2 / IPsec
+set security ike proposal IKEv2-PROP authentication-method pre-shared-keys
+set security ike proposal IKEv2-PROP dh-group group20
+set security ike proposal IKEv2-PROP authentication-algorithm sha512
+set security ike proposal IKEv2-PROP encryption-algorithm aes-256-cbc
+
+set security ike policy IKEv2-POL mode main
+set security ike policy IKEv2-POL proposals IKEv2-PROP
+
+set security ike gateway IKEv2-GW ike-policy IKEv2-POL
+set security ike gateway IKEv2-GW address {{ addresses.p2p.ocnos_mx1 | replace('/127','') }}
+set security ike gateway IKEv2-GW local-address {{ addresses.mx204_1.p2p_ocnos | replace('/127','') }}
+set security ike gateway IKEv2-GW pre-shared-key ascii-text {{ secrets.ipsec_key }}
+set security ike gateway IKEv2-GW dead-peer-detection interval 30
+set security ike gateway IKEv2-GW dead-peer-detection threshold 5
+
+set security ipsec proposal IPSEC-PROP protocol esp
+set security ipsec proposal IPSEC-PROP authentication-algorithm hmac-sha512-256
+set security ipsec proposal IPSEC-PROP encryption-algorithm aes-256-cbc
+
+set security ipsec policy IPSEC-POL proposals IPSEC-PROP
+set security ipsec policy IPSEC-POL perfect-forward-secrecy keys group20
+
+set security ipsec vpn IPSEC-VPN ike gateway IKEv2-GW
+set security ipsec vpn IPSEC-VPN ike ipsec-policy IPSEC-POL
+set security ipsec vpn IPSEC-VPN bind-interface st0.0
+
+set interfaces st0 unit 0 family inet6 address 2001:db8:ipsec::2/127
+
+## NETCONF/RESTCONF/gNMI testing (from management host via IPv6)
+set system services netconf ssh
+set system services rest http port 443

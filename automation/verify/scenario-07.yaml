@@ -1,0 +1,80 @@
+- test_case:
+    category: "IPv6 Multicast"
+    name: "MLDv2 (Multicast Listener Discovery v2)"
+  devices: [ocnos-dut, mx204-1, mx204-2, mx204-3]
+  commands:
+    - "show ipv6 mld groups"
+    - "show ipv6 mld interface"
+    - "show ipv6 mld snooping"
+
+- test_case:
+    category: "IPv6 Multicast"
+    name: "PIM-SM for IPv6"
+  devices: [ocnos-dut, mx204-1, mx204-2, mx204-3]
+  commands:
+    - "show ipv6 pim neighbor"
+    - "show ipv6 pim rp mapping"
+    - "show ipv6 mroute"
+    - "show ipv6 pim interface"
+
+- test_case:
+    category: "IPv6 Multicast"
+    name: "PIM-SSM for IPv6"
+  devices: [ocnos-dut]
+  commands:
+    - "show ipv6 mroute ff35::"
+    - "show ipv6 pim interface | include SSM"
+
+- test_case:
+    category: "IPv6 Multicast"
+    name: "IPv6 Multicast VPN (mVPN / NG-mVPN)"
+  devices: [ocnos-dut, mx204-2, mx204-3]
+  commands:
+    - "show multicast-vpn vrf MCAST-VPN"
+    - "show mpls mldp p2mp"
+    - "show ip mroute vrf MCAST-VPN"
+
+- test_case:
+    category: "IPv6 Multicast"
+    name: "mLDP (Multipoint LDP) over IPv6"
+  devices: [ocnos-dut, mx204-1, mx204-2, mx204-3]
+  commands:
+    - "show mpls mldp database"
+    - "show mpls mldp neighbors"
+    - "show mpls mldp p2mp"
+    - "show mpls forwarding mldp"
+
+- test_case:
+    category: "High Availability & Resiliency"
+    name: "VRRPv3 for IPv6"
+  devices: [ocnos-dut, mx204-1]
+  commands:
+    - "show vrrp ipv6"
+    - "show vrrp detail"
+    - "show ipv6 neighbors | include 2001:db8:12::ff"
+
+- test_case:
+    category: "High Availability & Resiliency"
+    name: "NSF / Graceful Restart for IPv6"
+  devices: [ocnos-dut]
+  commands:
+    - "show bgp neighbors | include Graceful"
+    - "show isis graceful-restart"
+    - "show ospfv3 graceful-restart"
+
+- test_case:
+    category: "High Availability & Resiliency"
+    name: "ECMP & Load Balancing for IPv6"
+  devices: [ocnos-dut]
+  commands:
+    - "show ipv6 route ecmp"
+    - "show forwarding ipv6 table"
+    - "show platform hardware qfp active statistics"
+
+- test_case:
+    category: "High Availability & Resiliency"
+    name: "IPv6 Fast Reroute (IP-FRR / LFA)"
+  devices: [ocnos-dut]
+  commands:
+    - "show ipv6 ospf rib lfa"
+    - "show isis fast-reroute"

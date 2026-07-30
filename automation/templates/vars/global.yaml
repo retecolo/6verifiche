@@ -1,0 +1,56 @@
+# Shared lab address plan — all scenarios draw from this
+lab:
+  domain: lab.example.com
+  as_number: 65001
+
+addresses:
+  ocnos:
+    loopback: "2001:db8:0::1/128"
+    mgmt: "2001:db8:mgmt::10/64"
+  mx204_1:
+    loopback: "2001:db8:1::1/128"
+    p2p_ocnos: "2001:db8:12::1/127"
+  mx204_2:
+    loopback: "2001:db8:2::1/128"
+    p2p_ocnos: "2001:db8:13::1/127"
+  mx204_3:
+    loopback: "2001:db8:3::1/128"
+    p2p_ocnos: "2001:db8:14::1/127"
+  p2p:
+    ocnos_mx1: "2001:db8:12::0/127"
+    ocnos_mx2: "2001:db8:13::0/127"
+    ocnos_mx3: "2001:db8:14::0/127"
+  mgmt:
+    gateway: "2001:db8:mgmt::1"
+    ntp: "2001:db8:mgmt::123"
+    syslog: "2001:db8:mgmt::514"
+    snmp_manager: "2001:db8:mgmt::161"
+    radius: "2001:db8:mgmt::1812"
+    tacacs: "2001:db8:mgmt::49"
+    dns: "2001:db8:mgmt::53"
+    dhcpv6: "2001:db8:mgmt::100"
+    flow_collector: "2001:db8:mgmt::2055"
+  rfc8950:
+    ocnos_v4_loopback: "192.0.2.1/32"
+    mx3_v4_loopback: "198.51.100.1/32"
+  nat64:
+    inside_host: "192.168.1.10"
+    outside_addr: "2001:db8:64::10"
+    nat64_prefix: "2001:db8:64::/96"
+  tunnel:
+    gre_ocnos: "2001:db8:tun::1/127"
+    gre_mx3: "2001:db8:tun::2/127"
+
+srv6:
+  locator_ocnos: "fcbb:0:1::/48"
+  locator_mx1:   "fcbb:0:2::/48"
+  locator_mx2:   "fcbb:0:3::/48"
+  locator_mx3:   "fcbb:0:4::/48"
+
+secrets:
+  radius_key: "CHANGE-ME-RADIUS"
+  tacacs_key: "CHANGE-ME-TACACS"
+  ipsec_key: "CHANGE-ME-IPSEC"
+  snmp_community: "PUBLIC"
+  bgp_auth: "CHANGE-ME-BGP"
+  l2tp_key: "CHANGE-ME-L2TP"

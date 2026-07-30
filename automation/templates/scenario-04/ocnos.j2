@@ -1,0 +1,122 @@
+! ── Scenario 4: MPLS Label Switching — OCNOS DUT ─────────────────────────────
+
+! ── IS-IS underlay ────────────────────────────────────────────────────────────
+router isis
+ net 49.0001.0000.0000.0001.00
+ is-type level-2-only
+ metric-style wide
+ address-family ipv6 unicast
+
+interface et-0/0/0
+ isis ipv6 enable
+ isis metric 10
+ mtu 9192
+ no shutdown
+ ipv6 address {{ addresses.p2p.ocnos_mx1 }}
+
+interface et-0/0/1
+ isis ipv6 enable
+ isis metric 10
+ mtu 9192
+ no shutdown
+ ipv6 address {{ addresses.p2p.ocnos_mx2 }}
+
+interface et-0/0/2
+ isis ipv6 enable
+ isis metric 10
+ mtu 9192
+ no shutdown
+ ipv6 address {{ addresses.p2p.ocnos_mx3 }}
+
+interface Loopback0
+ ipv6 address {{ addresses.ocnos.loopback }}
+ isis ipv6 enable
+
+! ── MPLS ──────────────────────────────────────────────────────────────────────
+mpls ip
+mpls label protocol ldp
+
+! ── LDP over IPv6 (RFC 7552) ─────────────────────────────────────────────────
+mpls ldp
+ address-family ipv6
+  discovery transport-address {{ addresses.ocnos.loopback | replace('/128','') }}
+  interface et-0/0/0
+  interface et-0/0/1
+  interface et-0/0/2
+
+! ── BFD for MPLS LSP ─────────────────────────────────────────────────────────
+mpls oam
+ echo source-ip-address {{ addresses.ocnos.loopback | replace('/128','') }}
+ bfd mpls-lsp minimum-interval 150 multiplier 3
+
+! ── RSVP-TE over IPv6 ────────────────────────────────────────────────────────
+mpls traffic-eng tunnels
+ip rsvp bandwidth
+!
+interface et-0/0/0
+ mpls traffic-eng tunnels
+ ip rsvp bandwidth 10000000
+interface et-0/0/1
+ mpls traffic-eng tunnels
+ ip rsvp bandwidth 10000000
+
+interface Tunnel100
+ description RSVP-TE-TO-MX204-1
+ ip unnumbered Loopback0
+ tunnel mode mpls traffic-eng
+ tunnel destination {{ addresses.mx204_1.loopback | replace('/128','') }}
+ tunnel mpls traffic-eng bandwidth 1000000
+ tunnel mpls traffic-eng path-option 10 dynamic
+
+! ── SR-MPLS with IPv6 control plane ─────────────────────────────────────────
+segment-routing mpls
+ set-attributes
+  address-family ipv6
+   sr-label-preferred
+ !
+ connected-prefix-sid-map
+  address-family ipv6
+   {{ addresses.ocnos.loopback }} index 1 range 1
+
+! ── 6PE ──────────────────────────────────────────────────────────────────────
+router bgp {{ lab.as_number }}
+ no bgp default ipv4-unicast
+ neighbor {{ addresses.mx204_1.loopback | replace('/128','') }} remote-as {{ lab.as_number }}
+ neighbor {{ addresses.mx204_1.loopback | replace('/128','') }} description iBGP-6PE-MX204-1
+ neighbor {{ addresses.mx204_1.loopback | replace('/128','') }} update-source Loopback0
+ !
+ address-family ipv6 unicast
+  neighbor {{ addresses.mx204_1.loopback | replace('/128','') }} activate
+  neighbor {{ addresses.mx204_1.loopback | replace('/128','') }} send-community extended
+  network 2001:db8:a::/48
+ exit-address-family
+
+! ── 6VPE ─────────────────────────────────────────────────────────────────────
+vrf definition CUSTOMER-A
+ rd {{ lab.as_number }}:100
+ route-target export {{ lab.as_number }}:100
+ route-target import {{ lab.as_number }}:100
+ address-family ipv6
+ exit-address-family
+
+interface et-0/0/0.100
+ vrf forwarding CUSTOMER-A
+ ipv6 address 2001:db8:a:12::1/64
+
+router bgp {{ lab.as_number }}
+ address-family vpnv6
+  neighbor {{ addresses.mx204_1.loopback | replace('/128','') }} activate
+  neighbor {{ addresses.mx204_1.loopback | replace('/128','') }} send-community extended
+ exit-address-family
+ !
+ address-family ipv6 vrf CUSTOMER-A
+  network 2001:db8:a::/48
+ exit-address-family
+
+! ── LDP Pseudowire over IPv6 ─────────────────────────────────────────────────
+l2vpn xconnect context PW-MX204-3
+ member {{ addresses.mx204_3.loopback | replace('/128','') }} 100 encapsulation mpls
+ !
+interface et-0/0/2.200
+ encapsulation dot1q 200
+ xconnect {{ addresses.mx204_3.loopback | replace('/128','') }} 200 encapsulation mpls

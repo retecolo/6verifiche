@@ -1,0 +1,24 @@
+## Scenario 7: Multicast & HA — MX204-3 (mVPN receiver PE)
+set system host-name mx204-3
+set interfaces et-0/0/0 mtu 9192
+set interfaces et-0/0/0 unit 0 family inet6 address {{ addresses.mx204_3.p2p_ocnos }}
+set interfaces lo0 unit 0 family inet6 address {{ addresses.mx204_3.loopback }}
+
+## IS-IS
+set protocols isis interface et-0/0/0.0 level 2
+set protocols isis interface lo0.0 passive level 2
+
+## PIM-SM
+set protocols pim interface et-0/0/0.0 mode sparse
+set protocols pim rp static address {{ addresses.ocnos.loopback | replace('/128','') }}
+
+## mVPN receiver
+set routing-instances MCAST-VPN instance-type vrf
+set routing-instances MCAST-VPN route-distinguisher 65001:402
+set routing-instances MCAST-VPN vrf-target target:65001:400
+set routing-instances MCAST-VPN protocols pim interface all mode sparse
+
+## mLDP
+set protocols ldp p2mp
+set protocols ldp interface et-0/0/0.0
+set protocols ldp transport-address {{ addresses.mx204_3.loopback | replace('/128','') }}

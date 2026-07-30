@@ -1,0 +1,11 @@
+## Scenario 1: Management & Core IPv6 — MX204-3
+set system host-name mx204-3
+set system ntp server {{ addresses.mgmt.ntp }}
+set system syslog host {{ addresses.mgmt.syslog }} any any
+
+set interfaces et-0/0/0 description TO-OCNOS
+set interfaces et-0/0/0 mtu 9192
+set interfaces et-0/0/0 unit 0 family inet6 address {{ addresses.mx204_3.p2p_ocnos }}
+set interfaces lo0 unit 0 family inet6 address {{ addresses.mx204_3.loopback }}
+
+set protocols router-advertisement interface et-0/0/0.0 no-advertisements

@@ -1,0 +1,29 @@
+## Scenario 4: MPLS Label Switching — MX204-3 (PE3 — 6VPE + PW endpoint)
+set system host-name mx204-3
+set interfaces et-0/0/0 mtu 9192
+set interfaces et-0/0/0 unit 0 family inet6 address {{ addresses.mx204_3.p2p_ocnos }}
+set interfaces lo0 unit 0 family inet6 address {{ addresses.mx204_3.loopback }}
+
+## IS-IS
+set protocols isis interface et-0/0/0.0 level 2
+set protocols isis interface lo0.0 passive level 2
+
+## LDP
+set protocols ldp interface et-0/0/0.0
+set protocols ldp transport-address {{ addresses.mx204_3.loopback | replace('/128','') }}
+
+## MPLS
+set protocols mpls interface et-0/0/0.0
+
+## 6VPE iBGP
+set protocols bgp group IBGP type internal
+set protocols bgp group IBGP local-address {{ addresses.mx204_3.loopback | replace('/128','') }}
+set protocols bgp group IBGP neighbor {{ addresses.ocnos.loopback | replace('/128','') }}
+set protocols bgp group IBGP family inet6-vpn unicast
+
+set routing-instances CUSTOMER-A instance-type vrf
+set routing-instances CUSTOMER-A route-distinguisher 65001:101
+set routing-instances CUSTOMER-A vrf-target target:65001:100
+
+## LDP PW
+set protocols l2circuit neighbor {{ addresses.ocnos.loopback | replace('/128','') }} interface et-0/0/0.200 virtual-circuit-id 200

@@ -1,0 +1,66 @@
+- test_case:
+    category: "IPv6 Routing & Forwarding"
+    name: "OSPFv3"
+  devices: [ocnos-dut, mx204-1, mx204-2, mx204-3]
+  commands:
+    - "show ipv6 ospf neighbor"
+    - "show ipv6 ospf database"
+    - "show ipv6 route ospf"
+
+- test_case:
+    category: "IPv6 Routing & Forwarding"
+    name: "IS-IS (IPv6 Address Family)"
+  devices: [ocnos-dut, mx204-1, mx204-2, mx204-3]
+  commands:
+    - "show isis neighbors"
+    - "show isis database"
+    - "show ipv6 route isis"
+
+- test_case:
+    category: "High Availability & Resiliency"
+    name: "BFD over IPv6"
+  devices: [ocnos-dut]
+  commands:
+    - "show bfd neighbors"
+    - "show bfd neighbors details"
+
+- test_case:
+    category: "High Availability & Resiliency"
+    name: "ECMP & Load Balancing for IPv6"
+  devices: [ocnos-dut]
+  commands:
+    - "show ipv6 route ecmp"
+    - "show forwarding ipv6 table"
+
+- test_case:
+    category: "High Availability & Resiliency"
+    name: "IPv6 Fast Reroute (IP-FRR / LFA)"
+  devices: [ocnos-dut]
+  commands:
+    - "show ipv6 ospf rib lfa"
+    - "show isis fast-reroute detail"
+
+- test_case:
+    category: "Core IPv6 Protocols & Features"
+    name: "IPv6 Extension Header Processing"
+  devices: [ocnos-dut]
+  commands:
+    - "show ipv6 traffic"
+    - "show platform hardware qfp active statistics drop"
+
+- test_case:
+    category: "Core IPv6 Protocols & Features"
+    name: "IPv6 Flow Label"
+  devices: [ocnos-dut]
+  commands:
+    - "show ipv6 interface et-0/0/0"
+    - "show ipv6 cef detail"
+
+- test_case:
+    category: "IPv6 Routing & Forwarding"
+    name: "RIPng"
+  devices: [ocnos-dut]
+  commands:
+    - "show ipv6 rip"
+    - "show ipv6 rip database"
+    - "show ipv6 route rip"

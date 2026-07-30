@@ -1,0 +1,20 @@
+## Scenario 3: MP-BGP & Advanced Routing — MX204-2 (AS 65001 — iBGP + ADD-PATH)
+set system host-name mx204-2
+set interfaces et-0/0/0 unit 0 family inet6 address {{ addresses.mx204_2.p2p_ocnos }}
+set interfaces lo0 unit 0 family inet6 address {{ addresses.mx204_2.loopback }}
+
+## iBGP to OCNOS (RR client)
+set protocols bgp group IBGP-OCNOS type internal
+set protocols bgp group IBGP-OCNOS local-address {{ addresses.mx204_2.p2p_ocnos }}
+set protocols bgp group IBGP-OCNOS neighbor {{ addresses.p2p.ocnos_mx2 }}
+
+## IPv6 unicast + ADD-PATH
+set protocols bgp group IBGP-OCNOS family inet6 unicast add-path receive
+set protocols bgp group IBGP-OCNOS family inet6 unicast add-path send path-count 3
+
+## Graceful Restart
+set protocols bgp group IBGP-OCNOS graceful-restart
+
+set policy-options policy-statement EXPORT-LO term 1 from route-filter {{ addresses.mx204_2.loopback }} exact
+set policy-options policy-statement EXPORT-LO term 1 then accept
+set protocols bgp group IBGP-OCNOS export EXPORT-LO

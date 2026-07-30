@@ -1,0 +1,46 @@
+- test_case:
+    category: "Overlay Networks & EVPN"
+    name: "VXLAN over IPv6 (VXLANv6 Unicast)"
+  devices: [ocnos-dut, mx204-1, mx204-2, mx204-3]
+  commands:
+    - "show nve peers"
+    - "show nve vni"
+    - "show vxlan interface nve1"
+    - "show ipv6 route 2001:db8:1::1"
+
+- test_case:
+    category: "Overlay Networks & EVPN"
+    name: "VXLAN EVPN over IPv6"
+  devices: [ocnos-dut, mx204-1, mx204-2, mx204-3]
+  commands:
+    - "show bgp l2vpn evpn summary"
+    - "show bgp l2vpn evpn route-type 2"
+    - "show bgp l2vpn evpn route-type 3"
+    - "show mac address-table vlan 10"
+
+- test_case:
+    category: "Overlay Networks & EVPN"
+    name: "EVPN L3 Gateway (IRB) over IPv6"
+  devices: [ocnos-dut]
+  commands:
+    - "show ipv6 route vrf OVERLAY"
+    - "show bgp l2vpn evpn route-type 5"
+    - "show ip arp evpn"
+
+- test_case:
+    category: "Overlay Networks & EVPN"
+    name: "EVPN Multi-Homing (ES-LAG) over IPv6"
+  devices: [ocnos-dut, mx204-1, mx204-2]
+  commands:
+    - "show evpn ethernet-segment"
+    - "show bgp l2vpn evpn route-type 1"
+    - "show bgp l2vpn evpn route-type 4"
+    - "show evpn designated-forwarder"
+
+- test_case:
+    category: "Overlay Networks & EVPN"
+    name: "GENEVE over IPv6"
+  devices: [ocnos-dut, mx204-3]
+  commands:
+    - "show interface geneve1"
+    - "show tunnel geneve1"

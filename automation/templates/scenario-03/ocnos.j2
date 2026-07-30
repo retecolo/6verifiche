@@ -1,0 +1,75 @@
+! ── Scenario 3: MP-BGP & Advanced Routing — OCNOS DUT ────────────────────────
+
+! ── Interfaces ────────────────────────────────────────────────────────────────
+interface et-0/0/0
+ description TO-MX204-1-eBGP-AS65002
+ mtu 9192
+ no shutdown
+ ipv6 address {{ addresses.p2p.ocnos_mx1 }}
+
+interface et-0/0/1
+ description TO-MX204-2-iBGP-AS65001
+ mtu 9192
+ no shutdown
+ ipv6 address {{ addresses.p2p.ocnos_mx2 }}
+
+interface et-0/0/2
+ description TO-MX204-3-eBGP-AS65003-RFC8950
+ mtu 9192
+ no shutdown
+ ipv6 address {{ addresses.p2p.ocnos_mx3 }}
+
+interface Loopback0
+ ipv6 address {{ addresses.ocnos.loopback }}
+
+! ── BGP ───────────────────────────────────────────────────────────────────────
+router bgp {{ lab.as_number }}
+ bgp router-id 0.0.0.1
+ bgp log-neighbor-changes
+ no bgp default ipv4-unicast
+
+ ! Non-Stop Forwarding / Graceful Restart
+ bgp graceful-restart
+ bgp graceful-restart stalepath-time 300
+ bgp graceful-restart restart-time 120
+
+ ! ── iBGP to MX204-2 (Route Reflector client) ────────────────────────────────
+ neighbor {{ addresses.mx204_2.p2p_ocnos }} remote-as {{ lab.as_number }}
+ neighbor {{ addresses.mx204_2.p2p_ocnos }} description iBGP-MX204-2
+ neighbor {{ addresses.mx204_2.p2p_ocnos }} update-source Loopback0
+ neighbor {{ addresses.mx204_2.p2p_ocnos }} route-reflector-client
+
+ ! ── eBGP to MX204-1 ──────────────────────────────────────────────────────────
+ neighbor {{ addresses.mx204_1.p2p_ocnos }} remote-as 65002
+ neighbor {{ addresses.mx204_1.p2p_ocnos }} description eBGP-MX204-1
+
+ ! ── eBGP to MX204-3 ──────────────────────────────────────────────────────────
+ neighbor {{ addresses.mx204_3.p2p_ocnos }} remote-as 65003
+ neighbor {{ addresses.mx204_3.p2p_ocnos }} description eBGP-MX204-3-RFC8950
+
+ ! ── IPv6 unicast AF ──────────────────────────────────────────────────────────
+ address-family ipv6 unicast
+  network {{ addresses.ocnos.loopback }}
+  neighbor {{ addresses.mx204_1.p2p_ocnos }} activate
+  neighbor {{ addresses.mx204_1.p2p_ocnos }} send-community both
+  neighbor {{ addresses.mx204_2.p2p_ocnos }} activate
+  neighbor {{ addresses.mx204_2.p2p_ocnos }} send-community both
+  neighbor {{ addresses.mx204_2.p2p_ocnos }} additional-paths send receive
+  neighbor {{ addresses.mx204_3.p2p_ocnos }} activate
+  neighbor {{ addresses.mx204_3.p2p_ocnos }} send-community both
+  maximum-paths 3
+  additional-paths select all
+ exit-address-family
+
+ ! ── IPv6 labeled unicast (BGP-LU) ────────────────────────────────────────────
+ address-family ipv6 labeled-unicast
+  neighbor {{ addresses.mx204_1.p2p_ocnos }} activate
+  network {{ addresses.ocnos.loopback }}
+ exit-address-family
+
+ ! ── IPv4 unicast with IPv6 next-hop (RFC 8950 / 5549) ────────────────────────
+ address-family ipv4 unicast
+  neighbor {{ addresses.mx204_3.p2p_ocnos }} activate
+  neighbor {{ addresses.mx204_3.p2p_ocnos }} capability extended-nexthop
+  network {{ addresses.rfc8950.ocnos_v4_loopback }}
+ exit-address-family

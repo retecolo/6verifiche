@@ -1,0 +1,20 @@
+ocnos:
+  connection_options:
+    netmiko:
+      extras:
+        device_type: linux
+        port: 22
+        timeout: 60
+        global_delay_factor: 2
+
+junos:
+  connection_options:
+    netmiko:
+      extras:
+        device_type: juniper_junos
+        port: 22
+        timeout: 60
+
+lab:
+  data:
+    lab: true

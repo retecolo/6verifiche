@@ -1,0 +1,41 @@
+## Scenario 4: MPLS Label Switching — MX204-1 (PE2 — 6PE/6VPE remote PE)
+set system host-name mx204-1
+set interfaces et-0/0/0 mtu 9192
+set interfaces et-0/0/0 unit 0 family inet6 address {{ addresses.mx204_1.p2p_ocnos }}
+set interfaces lo0 unit 0 family inet6 address {{ addresses.mx204_1.loopback }}
+
+## IS-IS underlay
+set protocols isis interface et-0/0/0.0 level 2
+set protocols isis interface lo0.0 passive level 2
+set protocols isis level 2 wide-metrics-only
+
+## LDP over IPv6
+set protocols ldp interface et-0/0/0.0
+set protocols ldp transport-address {{ addresses.mx204_1.loopback | replace('/128','') }}
+
+## MPLS
+set protocols mpls interface et-0/0/0.0
+
+## RSVP-TE
+set protocols rsvp interface et-0/0/0.0
+
+## SR-MPLS
+set protocols isis source-packet-routing node-segment ipv6-index 101
+
+## 6PE — iBGP with OCNOS
+set protocols bgp group IBGP type internal
+set protocols bgp group IBGP local-address {{ addresses.mx204_1.loopback | replace('/128','') }}
+set protocols bgp group IBGP neighbor {{ addresses.ocnos.loopback | replace('/128','') }} description TO-OCNOS-PE1
+set protocols bgp group IBGP family inet6 unicast
+set protocols bgp group IBGP family inet6 labeled-unicast
+
+## 6VPE
+set routing-instances CUSTOMER-A instance-type vrf
+set routing-instances CUSTOMER-A route-distinguisher 65001:100
+set routing-instances CUSTOMER-A vrf-target target:65001:100
+set routing-instances CUSTOMER-A interface et-0/0/0.100
+set protocols bgp group IBGP family inet6-vpn unicast
+
+## MPLS BFD
+set protocols mpls lsp-external-controller lsp-monitor
+set protocols bfd adjacency-segment-protection

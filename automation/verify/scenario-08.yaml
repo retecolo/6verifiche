@@ -1,0 +1,90 @@
+- test_case:
+    category: "Security, Transition & Hardware"
+    name: "IPv6 ACLs & First-Hop Security"
+  devices: [ocnos-dut]
+  commands:
+    - "show ipv6 access-list IPV6-INGRESS-ACL"
+    - "show ipv6 access-list IPV6-EGRESS-ACL"
+    - "show ipv6 nd raguard policy UNTRUSTED"
+    - "show ipv6 nd inspection policy ND-INSPECT"
+    - "show ipv6 dhcp guard policy DHCP-UNTRUSTED"
+
+- test_case:
+    category: "Security, Transition & Hardware"
+    name: "Simultaneous IPv4 and IPv6 ACL Enforcement"
+  devices: [ocnos-dut]
+  commands:
+    - "show ip access-list IPV4-INGRESS-ACL"
+    - "show ipv6 access-list IPV6-INGRESS-ACL"
+    - "show platform hardware tcam statistics"
+
+- test_case:
+    category: "Security, Transition & Hardware"
+    name: "IPv6 ACL Ingress and Egress Direction Restrictions"
+  devices: [ocnos-dut]
+  commands:
+    - "show ipv6 access-list IPV6-EGRESS-ACL"
+    - "show interfaces et-0/0/2 | include drop"
+
+- test_case:
+    category: "Security, Transition & Hardware"
+    name: "Hardware / ASIC Datapath"
+  devices: [ocnos-dut]
+  commands:
+    - "show ipv6 traffic"
+    - "show platform hardware qfp active statistics"
+    - "show platform hardware qfp active feature acl statistics"
+    - "show interfaces et-0/0/0 | include input rate|output rate"
+
+- test_case:
+    category: "Security, Transition & Hardware"
+    name: "CoPP (Control Plane Policing) for IPv6"
+  devices: [ocnos-dut]
+  commands:
+    - "show policy-map control-plane"
+    - "show policy-map control-plane class COPP-IPV6-ND"
+    - "show policy-map control-plane class COPP-IPV6-ICMP"
+
+- test_case:
+    category: "Security, Transition & Hardware"
+    name: "IPv6 uRPF (Unicast Reverse Path Forwarding)"
+  devices: [ocnos-dut]
+  commands:
+    - "show ipv6 interface et-0/0/1 | include uRPF"
+    - "show ipv6 traffic | include uRPF"
+    - "show platform hardware qfp active feature urpf statistics"
+
+- test_case:
+    category: "Link Security (MACsec)"
+    name: "MACsec Link Encryption (IEEE 802.1AE)"
+  devices: [ocnos-dut, mx204-1]
+  commands:
+    - "show macsec summary"
+    - "show macsec interface et-0/0/0"
+    - "show macsec statistics interface et-0/0/0"
+
+- test_case:
+    category: "Link Security (MACsec)"
+    name: "MKA (MACsec Key Agreement) over IPv6"
+  devices: [ocnos-dut, mx204-1]
+  commands:
+    - "show mka sessions"
+    - "show mka policy MKA-POLICY"
+    - "show mka statistics interface et-0/0/0"
+
+- test_case:
+    category: "Link Security (MACsec)"
+    name: "MACsec with SRv6 / VXLAN Underlay"
+  devices: [ocnos-dut, mx204-1]
+  commands:
+    - "show macsec interface et-0/0/0 detail"
+    - "show segment-routing srv6 forwarding"
+
+- test_case:
+    category: "Security, Transition & Hardware"
+    name: "IPv6 Transition Mechanisms"
+  devices: [ocnos-dut]
+  commands:
+    - "show ip nat translations"
+    - "show ip dns64"
+    - "show interface Tunnel200"

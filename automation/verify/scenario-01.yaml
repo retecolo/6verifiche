@@ -1,0 +1,98 @@
+- test_case:
+    category: "Network Management & Telemetry"
+    name: "SSH (SSHv2)"
+  devices: [ocnos-dut]
+  commands:
+    - "show ssh session"
+    - "show running-config | include ssh"
+
+- test_case:
+    category: "Network Management & Telemetry"
+    name: "RADIUS"
+  devices: [ocnos-dut]
+  commands:
+    - "show aaa servers"
+
+- test_case:
+    category: "Network Management & Telemetry"
+    name: "TACACS+"
+  devices: [ocnos-dut]
+  commands:
+    - "show tacacs-server"
+
+- test_case:
+    category: "Network Management & Telemetry"
+    name: "Syslog"
+  devices: [ocnos-dut]
+  commands:
+    - "show logging"
+
+- test_case:
+    category: "Network Management & Telemetry"
+    name: "SNMP"
+  devices: [ocnos-dut, mx204-1, mx204-2, mx204-3]
+  commands:
+    - "show snmp"
+
+- test_case:
+    category: "Network Management & Telemetry"
+    name: "NetFlow / IPFIX / sFlow"
+  devices: [ocnos-dut]
+  commands:
+    - "show ip flow export"
+    - "show ipv6 flow export"
+
+- test_case:
+    category: "Network Management & Telemetry"
+    name: "NTP"
+  devices: [ocnos-dut, mx204-1, mx204-2, mx204-3]
+  commands:
+    - "show ntp status"
+    - "show ntp associations"
+
+- test_case:
+    category: "Network Management & Telemetry"
+    name: "DNS"
+  devices: [ocnos-dut]
+  commands:
+    - "show hosts"
+
+- test_case:
+    category: "Core IPv6 Protocols & Features"
+    name: "ICMPv6 & Neighbor Discovery"
+  devices: [ocnos-dut]
+  commands:
+    - "show ipv6 neighbors"
+    - "show ipv6 interface et-0/0/0"
+
+- test_case:
+    category: "Core IPv6 Protocols & Features"
+    name: "Addressing & SLAAC / DHCPv6"
+  devices: [ocnos-dut]
+  commands:
+    - "show ipv6 interface brief"
+    - "show ipv6 dhcp relay statistics"
+
+- test_case:
+    category: "Core IPv6 Protocols & Features"
+    name: "Path MTU Discovery (PMTUD)"
+  devices: [ocnos-dut]
+  commands:
+    - "show ipv6 traffic"
+
+- test_case:
+    category: "Core IPv6 Protocols & Features"
+    name: "DHCPv6 Relay"
+  devices: [ocnos-dut]
+  commands:
+    - "show ipv6 dhcp relay interface et-0/0/0"
+    - "show ipv6 dhcp relay statistics"
+
+- test_case:
+    category: "Core IPv6 Protocols & Features"
+    name: "Router Advertisement Suppression"
+  devices: [ocnos-dut]
+  commands:
+    - "show ipv6 interface et-0/0/0"
+    - "show ipv6 interface et-0/0/1"
+    - "show ipv6 interface et-0/0/2"

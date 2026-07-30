@@ -1,0 +1,20 @@
+## Scenario 8: Security — MX204-1 (MACsec peer)
+set system host-name mx204-1
+set interfaces et-0/0/0 mtu 9192
+set interfaces et-0/0/0 unit 0 family inet6 address {{ addresses.mx204_1.p2p_ocnos }}
+set interfaces lo0 unit 0 family inet6 address {{ addresses.mx204_1.loopback }}
+
+## IS-IS
+set protocols isis interface et-0/0/0.0 level 2
+set protocols isis interface lo0.0 passive level 2
+
+## MACsec (IEEE 802.1AE, GCM-AES-256)
+set security macsec connectivity-association CA1 security-mode static-cak
+set security macsec connectivity-association CA1 pre-shared-key ckn CAFEBABE01234567CAFEBABE0123456701234567CAFEBABE01234567CAFEBABE01
+set security macsec connectivity-association CA1 pre-shared-key cak CAFEBABE01234567CAFEBABE01234567CAFEBABE01234567CAFEBABE01234567
+set security macsec connectivity-association CA1 cipher-suite gcm-aes-256
+set security macsec interface et-0/0/0 connectivity-association CA1
+
+## SRv6 over MACsec
+set routing-options source-packet-routing srv6 locator MAIN {{ srv6.locator_mx1 }}
+set protocols isis source-packet-routing srv6 locator MAIN end-sid fcbb:0:2:0001::

@@ -1,0 +1,66 @@
+- test_case:
+    category: "MPLS & Label Switching"
+    name: "6PE (IPv6 Provider Edge)"
+  devices: [ocnos-dut, mx204-1]
+  commands:
+    - "show bgp ipv6 unicast"
+    - "show bgp ipv6 unicast 2001:db8:a::/48"
+    - "show mpls forwarding-table 2001:db8:a::/48 detail"
+
+- test_case:
+    category: "MPLS & Label Switching"
+    name: "6VPE (IPv6 VPN Provider Edge)"
+  devices: [ocnos-dut, mx204-1, mx204-3]
+  commands:
+    - "show vrf CUSTOMER-A"
+    - "show bgp vpnv6 unicast vrf CUSTOMER-A"
+    - "show ipv6 route vrf CUSTOMER-A"
+    - "show mpls forwarding-table vrf CUSTOMER-A detail"
+
+- test_case:
+    category: "MPLS & Label Switching"
+    name: "LDPoIPv6 (LDP over IPv6)"
+  devices: [ocnos-dut, mx204-1, mx204-2, mx204-3]
+  commands:
+    - "show mpls ldp neighbor"
+    - "show mpls ldp bindings"
+    - "show mpls ldp transport-address"
+    - "show mpls forwarding-table"
+
+- test_case:
+    category: "MPLS & Label Switching"
+    name: "MPLS BFD over IPv6"
+  devices: [ocnos-dut, mx204-1]
+  commands:
+    - "show bfd neighbors mpls"
+    - "show mpls oam lsp verify ipv6 2001:db8:1::1 detail"
+
+- test_case:
+    category: "MPLS & Label Switching"
+    name: "MPLS-TE RSVP-TE over IPv6"
+  devices: [ocnos-dut]
+  commands:
+    - "show mpls traffic-eng tunnels brief"
+    - "show mpls traffic-eng tunnels tunnel100"
+    - "show rsvp neighbor"
+    - "show rsvp session"
+
+- test_case:
+    category: "Segment Routing"
+    name: "SR-MPLS with IPv6 Control Plane"
+  devices: [ocnos-dut, mx204-1]
+  commands:
+    - "show segment-routing mpls"
+    - "show segment-routing mpls connected-prefix-sid-map"
+    - "show isis segment-routing prefix-sid"
+    - "show mpls forwarding-table label detail"
+
+- test_case:
+    category: "VPN & Tunneling"
+    name: "MPLS Pseudowires (LDP PW) over IPv6"
+  devices: [ocnos-dut, mx204-3]
+  commands:
+    - "show xconnect all"
+    - "show l2vpn xconnect state up"
+    - "show mpls l2transport vc detail"
+    - "show bfd neighbors vc"

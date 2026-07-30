@@ -1,0 +1,27 @@
+## Scenario 3: MP-BGP & Advanced Routing — MX204-3 (AS 65003 — eBGP + RFC 8950)
+set system host-name mx204-3
+set interfaces et-0/0/0 unit 0 family inet6 address {{ addresses.mx204_3.p2p_ocnos }}
+set interfaces lo0 unit 0 family inet6 address {{ addresses.mx204_3.loopback }}
+
+## eBGP to OCNOS
+set protocols bgp group EBGP-OCNOS type external
+set protocols bgp group EBGP-OCNOS peer-as {{ lab.as_number }}
+set protocols bgp group EBGP-OCNOS local-as 65003
+set protocols bgp group EBGP-OCNOS neighbor {{ addresses.p2p.ocnos_mx3 }}
+
+## RFC 8950: IPv4 NLRI with IPv6 next-hop
+set protocols bgp group EBGP-OCNOS family inet unicast extended-nexthop
+set protocols bgp group EBGP-OCNOS neighbor {{ addresses.p2p.ocnos_mx3 }} family inet unicast extended-nexthop
+
+## IPv6 unicast
+set protocols bgp group EBGP-OCNOS family inet6 unicast
+set protocols bgp group EBGP-OCNOS neighbor {{ addresses.p2p.ocnos_mx3 }} family inet6 unicast
+
+## Graceful Restart
+set protocols bgp group EBGP-OCNOS graceful-restart
+
+## Advertise an IPv4 prefix for RFC 8950 testing
+set interfaces lo0 unit 0 family inet address {{ addresses.rfc8950.mx3_v4_loopback }}
+set policy-options policy-statement EXPORT-V4 term 1 from route-filter {{ addresses.rfc8950.mx3_v4_loopback }} exact
+set policy-options policy-statement EXPORT-V4 term 1 then accept
+set protocols bgp group EBGP-OCNOS export EXPORT-V4
