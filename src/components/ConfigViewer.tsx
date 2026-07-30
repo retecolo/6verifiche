@@ -19,13 +19,13 @@ export default function ConfigViewer({ content, testCaseName, isLoading }: Props
   const kwRegex = useMemo(() => {
     if (keywords.length === 0) return null;
     const escaped = keywords.map((k) => k.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"));
-    return new RegExp(escaped.join("|"), "gi");
+    return new RegExp(escaped.join("|"), "i");
   }, [keywords]);
 
   const searchRegex = useMemo(() => {
     if (!search.trim()) return null;
     try {
-      return new RegExp(search.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"), "gi");
+      return new RegExp(search.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"), "i");
     } catch {
       return null;
     }
@@ -34,8 +34,6 @@ export default function ConfigViewer({ content, testCaseName, isLoading }: Props
   const processedLines = useMemo(() => {
     if (!content) return [];
     return content.split("\n").map((line, i) => {
-      if (kwRegex) kwRegex.lastIndex = 0;
-      if (searchRegex) searchRegex.lastIndex = 0;
       const kwMatch = kwRegex ? kwRegex.test(line) : false;
       const srMatch = searchRegex ? searchRegex.test(line) : false;
       return { line, lineNum: i + 1, kwMatch, srMatch };
